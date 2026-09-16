@@ -10,7 +10,7 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "pixel-space"
-database_id = "1165cb8a-68bb-4e1d-b4db-917b50a536e0"  # 本地任意非空字符串即可；部署前在 Dashboard 建库后回填真实 ID
+database_id = "b844c19e-b5ff-4cc5-b928-27d6d4342c2e"  # 本地任意非空字符串即可；部署前在 Dashboard 建库后回填真实 ID
 migrations_dir = "db/migrations"
 
 # R2 压缩图 bucket binding：Pages Functions 里通过 env.BUCKET 访问。
