@@ -1,11 +1,11 @@
-import type { Env } from '../../../../types';
-import { resolveAdmin } from '../../../../_shared/auth';
-import { badRequest, json, notFound, serverError, unauthorized } from '../../../../_shared/http';
-import { IMAGE_SELECT_COLUMNS, type ImageRow, rowToAdminRecord, normalizeTagsJson, normalizeColorPaletteJson } from '../../../../_shared/images';
-import { requireSameOrigin } from '../../../../_shared/security';
-import { withRequestLogging } from '../../../../_shared/logger';
-import { createImageKey, keyFromRouteParam } from '../../../../_shared/keys';
-import { coordinateOrNull, integerOrNull, numberOrNull, stringOrEmpty, stringOrNull, normalizeStringList } from '../../../../_shared/request';
+import type { Env } from '../../../../../types';
+import { resolveAdmin } from '../../../../../_shared/auth';
+import { badRequest, json, notFound, serverError, unauthorized } from '../../../../../_shared/http';
+import { IMAGE_SELECT_COLUMNS, type ImageRow, rowToAdminRecord, normalizeTagsJson, normalizeColorPaletteJson } from '../../../../../_shared/images';
+import { requireSameOrigin } from '../../../../../_shared/security';
+import { withRequestLogging } from '../../../../../_shared/logger';
+import { createImageKey, keyFromRouteParam } from '../../../../../_shared/keys';
+import { coordinateOrNull, integerOrNull, numberOrNull, stringOrEmpty, stringOrNull, normalizeStringList } from '../../../../../_shared/request';
 
 interface TelegramStagedImageRow extends ImageRow {
   hash: string | null;
@@ -50,10 +50,20 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
   if (compressed.size > MAX_COMPRESSED_BYTES) return badRequest('compressed_too_large');
 
   const dimensions = jsonField(formData, 'dimensions');
+  const originalDimensions = jsonField(formData, 'original_dimensions');
+  const originalBytesValue = formData.get('original_bytes');
   const exif = jsonField(formData, 'exif');
   const meta = jsonField(formData, 'meta');
   const ai = jsonField(formData, 'ai');
   if (!dimensions || !exif || !meta) return badRequest('missing_process_fields');
+
+  const originalWidth = integerOrNull(originalDimensions?.width);
+  const originalHeight = integerOrNull(originalDimensions?.height);
+  const originalBytes = typeof originalBytesValue === 'string' ? Number.parseInt(originalBytesValue, 10) : Number.NaN;
+  if (originalWidth === null || originalHeight === null || originalWidth <= 0 || originalHeight <= 0) {
+    return badRequest('invalid_original_dimensions');
+  }
+  if (!Number.isFinite(originalBytes) || originalBytes <= 0) return badRequest('invalid_original_bytes');
 
   const width = integerOrNull(dimensions.width);
   const height = integerOrNull(dimensions.height);
@@ -98,12 +108,12 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
     try {
       await env.DB.prepare(`
         INSERT INTO images (
-          key,title,caption,original_filename,width,height,format,bytes_compressed,hash,
+          key,title,caption,original_filename,width,height,format,bytes_compressed,original_bytes,original_width,original_height,hash,
           location_name,location_lat,location_lng,location_region,
           exif_taken_at,exif_camera,exif_iso,exif_aperture,exif_shutter,exif_focal_length,
           tags_json,search_content,dominant_color,color_palette_json,composition,ai_status,
           tg_file_id,tg_message_id,tg_chat_id,tg_status,tg_error,is_public,location_public,folder_id
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `).bind(
         newKey,
         aiTitle || stringOrEmpty(meta.title),
@@ -113,6 +123,9 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
         height,
         'webp',
         compressed.size,
+        originalBytes,
+        originalWidth,
+        originalHeight,
         hash,
         stringOrNull(meta.location_name),
         lat,
