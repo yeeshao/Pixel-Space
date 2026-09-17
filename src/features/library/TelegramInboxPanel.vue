@@ -80,8 +80,9 @@ const processOne = async (item: ImageRecord) => {
       dominant_color: item.dominant_color || '',
       palette: item.color_palette_json ? parseTags(item.color_palette_json).join(', ') : '',
       composition: item.composition || '',
-      is_public: item.is_public === 0 ? 0 : 1,
-      location_public: item.location_public === 0 ? 0 : 1,
+      is_public: (item.is_public === 0 ? 0 : 1) as 0 | 1,
+      location_public: (item.location_public === 0 ? 0 : 1) as 0 | 1,
+      folder_id: item.folder_id ?? null,
     };
 
     if (meta.location_lat !== null && meta.location_lng !== null && !meta.location_name) {
