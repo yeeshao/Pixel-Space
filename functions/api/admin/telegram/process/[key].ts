@@ -1,11 +1,11 @@
-import type { Env } from '../../../../../types';
-import { resolveAdmin } from '../../../../../_shared/auth';
-import { badRequest, json, notFound, serverError, unauthorized } from '../../../../../_shared/http';
-import { IMAGE_SELECT_COLUMNS, type ImageRow, rowToAdminRecord, normalizeTagsJson, normalizeColorPaletteJson } from '../../../../../_shared/images';
-import { requireSameOrigin } from '../../../../../_shared/security';
-import { withRequestLogging } from '../../../../../_shared/logger';
-import { createImageKey, keyFromRouteParam } from '../../../../../_shared/keys';
-import { coordinateOrNull, integerOrNull, numberOrNull, stringOrEmpty, stringOrNull, normalizeStringList } from '../../../../../_shared/request';
+import type { Env } from '../../../../types';
+import { resolveAdmin } from '../../../../_shared/auth';
+import { badRequest, json, notFound, serverError, unauthorized } from '../../../../_shared/http';
+import { IMAGE_SELECT_COLUMNS, type ImageRow, rowToAdminRecord, normalizeTagsJson, normalizeColorPaletteJson } from '../../../../_shared/images';
+import { requireSameOrigin } from '../../../../_shared/security';
+import { withRequestLogging } from '../../../../_shared/logger';
+import { createImageKey, keyFromRouteParam } from '../../../../_shared/keys';
+import { coordinateOrNull, integerOrNull, numberOrNull, stringOrEmpty, stringOrNull, normalizeStringList } from '../../../../_shared/request';
 
 interface TelegramStagedImageRow extends ImageRow {
   hash: string | null;
