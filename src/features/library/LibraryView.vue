@@ -68,6 +68,10 @@ const {
   handleRenameCurrent,
   handleDeleteCurrent,
   handleToggleFolderVisibility,
+  handleBatchRenameFolder,
+  handleBatchMoveFolders,
+  handleBatchDeleteFolders,
+  handleBatchToggleFolderVisibility,
   handleMove,
   handleBatchDelete,
   handleBatchLocation,
@@ -170,6 +174,10 @@ onMounted(refreshAll);
         @rename-folder="handleRenameFolder"
         @move-folder="handleMoveFolder"
         @delete-folder="handleDeleteFolder"
+        @batch-rename-folder="handleBatchRenameFolder"
+        @batch-move-folders="handleBatchMoveFolders"
+        @batch-delete-folders="handleBatchDeleteFolders"
+        @batch-toggle-folder-visibility="handleBatchToggleFolderVisibility"
       />
 
 

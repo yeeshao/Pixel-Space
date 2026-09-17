@@ -274,6 +274,109 @@ export const useLibraryActions = ({
     }
   };
 
+  const handleBatchRenameFolder = async (folder: FolderRecord) => {
+    const next = window.prompt('重命名文件夹', folder.name)?.trim();
+    if (!next || next === folder.name) return;
+    try {
+      const updated = await updateFolder(folder.id, { name: next });
+      folders.value = folders.value.map((item) => item.id === folder.id ? { ...item, ...updated } : item);
+      actionMessage.value = `已重命名「${folder.name}」为「${next}」`;
+    } catch (error) {
+      const message = (error as Error).message;
+      actionMessage.value = message.includes('name_conflict') ? '同级目录里已经有同名文件夹' : `重命名失败：${message}`;
+    }
+  };
+
+  const handleBatchToggleFolderVisibility = async (selected: FolderRecord[]) => {
+    if (!selected.length) return;
+    const target: 0 | 1 = selected.every((folder) => folder.is_public !== 0) ? 0 : 1;
+    try {
+      for (const folder of selected) {
+        const updated = await updateFolder(folder.id, { is_public: target });
+        folders.value = folders.value.map((item) => item.id === folder.id ? { ...item, ...updated } : item);
+      }
+      actionMessage.value = `${selected.length} 个文件夹已设为${target === 1 ? '公开' : '私有'}`;
+    } catch (error) {
+      actionMessage.value = `批量修改文件夹权限失败：${(error as Error).message}`;
+      await refreshAll();
+    }
+  };
+
+  const handleBatchMoveFolders = async (selected: FolderRecord[], targetId: string | null) => {
+    if (!selected.length) return;
+    const selectedIds = new Set(selected.map((folder) => folder.id));
+    const descendants = new Set<string>();
+    for (const source of selected) {
+      let frontier = [source.id];
+      while (frontier.length) {
+        const next: string[] = [];
+        for (const item of folders.value) {
+          if (item.parent_id && frontier.includes(item.parent_id) && !descendants.has(item.id)) {
+            descendants.add(item.id);
+            next.push(item.id);
+          }
+        }
+        frontier = next;
+      }
+    }
+    if (targetId !== null && (selectedIds.has(targetId) || descendants.has(targetId))) {
+      actionMessage.value = '不能移动到所选文件夹自身或其子目录中';
+      return;
+    }
+    try {
+      let moved = 0;
+      for (const folder of selected) {
+        if (folder.parent_id === targetId) continue;
+        await updateFolder(folder.id, { parent_id: targetId });
+        moved += 1;
+      }
+      await refreshAll();
+      const targetName = targetId ? folders.value.find((item) => item.id === targetId)?.name ?? '目标文件夹' : '根目录';
+      actionMessage.value = moved ? `已将 ${moved} 个文件夹移动到 ${targetName}` : '所选文件夹已经位于目标目录';
+    } catch (error) {
+      actionMessage.value = `批量移动文件夹失败：${(error as Error).message}`;
+      await refreshAll();
+    }
+  };
+
+  const handleBatchDeleteFolders = async (selected: FolderRecord[]) => {
+    if (!selected.length) return;
+    const blocked = selected.filter((folder) => folder.image_count > 0 || folder.child_count > 0);
+    if (blocked.length) {
+      actionMessage.value = `有 ${blocked.length} 个文件夹仍包含图片或子目录，无法删除`;
+      return;
+    }
+    if (!window.confirm(`确定删除选中的 ${selected.length} 个空文件夹？此操作不可恢复。`)) return;
+    try {
+      // 深层目录先删，避免父目录因仍有子目录而暂时无法删除。
+      const depthOf = (folder: FolderRecord) => {
+        let depth = 0;
+        let parentId = folder.parent_id;
+        while (parentId) {
+          depth += 1;
+          parentId = folders.value.find((item) => item.id === parentId)?.parent_id ?? null;
+          if (depth > folders.value.length) break;
+        }
+        return depth;
+      };
+      const ordered = [...selected].sort((a, b) => depthOf(b) - depthOf(a));
+      let deleted = 0;
+      for (const folder of ordered) {
+        try {
+          await deleteFolder(folder.id);
+          deleted += 1;
+        } catch {
+          // 后端仍会做非空/并发校验，失败项保留。
+        }
+      }
+      await refreshAll();
+      actionMessage.value = `已删除 ${deleted} 个文件夹${deleted < selected.length ? `，${selected.length - deleted} 个未删除` : ''}`;
+    } catch (error) {
+      actionMessage.value = `批量删除文件夹失败：${(error as Error).message}`;
+      await refreshAll();
+    }
+  };
+
   const handleDeleteFolder = async (folder: FolderRecord) => {
     if (folder.image_count > 0 || folder.child_count > 0) {
       actionMessage.value = `「${folder.name}」不为空，请先移走里面的图片和子目录`;
@@ -491,6 +594,10 @@ export const useLibraryActions = ({
     handleRenameFolder,
     handleMoveFolder,
     handleDeleteFolder,
+    handleBatchRenameFolder,
+    handleBatchMoveFolders,
+    handleBatchDeleteFolders,
+    handleBatchToggleFolderVisibility,
     handleRenameCurrent,
     handleToggleFolderVisibility,
     handleDeleteCurrent,

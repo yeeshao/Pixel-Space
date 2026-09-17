@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onBeforeUnmount, watch } from 'vue';
 import type { ImageRecord } from '@/features/images/image.types';
 import { imageSortOptions, type ImageSortMode } from '@/features/images/image-sort';
 import SelectPopover from '@/shared/ui/SelectPopover.vue';
@@ -47,6 +47,10 @@ const emit = defineEmits<{
   renameFolder: [folder: FolderRecord];
   moveFolder: [folder: FolderRecord, targetId: string | null];
   deleteFolder: [folder: FolderRecord];
+  batchRenameFolder: [folder: FolderRecord];
+  batchMoveFolders: [folders: FolderRecord[], targetId: string | null];
+  batchDeleteFolders: [folders: FolderRecord[]];
+  batchToggleFolderVisibility: [folders: FolderRecord[]];
 }>();
 
 const {
@@ -61,53 +65,130 @@ const {
   select: (key) => emit('dragSelect', key),
 });
 
+const folderSelection = ref<Set<string>>(new Set());
+const folderSelectMode = ref(false);
+const longPressTimer = ref<number | null>(null);
+const longPressTriggered = ref(false);
 const folderMoveOpen = ref(false);
-const folderMoveSource = ref<FolderRecord | null>(null);
 const folderMoveTarget = ref<string>('__root__');
 
-const folderMoveDescendants = computed(() => {
-  const source = folderMoveSource.value;
-  if (!source) return new Set<string>();
-  const result = new Set<string>();
-  let frontier = [source.id];
-  while (frontier.length) {
-    const next: string[] = [];
-    for (const folder of props.folders) {
-      if (folder.parent_id && frontier.includes(folder.parent_id) && !result.has(folder.id)) {
-        result.add(folder.id);
-        next.push(folder.id);
-      }
+const selectedFolders = computed(() => props.subfolders.filter((folder) => folderSelection.value.has(folder.id)));
+const hasNestedSelection = computed(() => {
+  const ids = new Set(selectedFolders.value.map((folder) => folder.id));
+  return selectedFolders.value.some((folder) => {
+    let parentId = folder.parent_id;
+    while (parentId) {
+      if (ids.has(parentId)) return true;
+      parentId = props.folders.find((item) => item.id === parentId)?.parent_id ?? null;
     }
-    frontier = next;
-  }
-  return result;
+    return false;
+  });
 });
 
-const folderMoveOptions = computed(() => props.folderOptions.filter((option) => {
-  if (!folderMoveSource.value) return false;
-  if (option.id === folderMoveSource.value.id) return false;
-  if (folderMoveDescendants.value.has(option.id)) return false;
-  return true;
-}));
+const clearFolderSelection = () => {
+  folderSelection.value = new Set();
+  folderSelectMode.value = false;
+};
 
-const openFolderMove = (folder: FolderRecord) => {
-  folderMoveSource.value = folder;
-  folderMoveTarget.value = folder.parent_id ?? '__root__';
+const toggleFolderSelection = (folder: FolderRecord) => {
+  const next = new Set(folderSelection.value);
+  if (next.has(folder.id)) next.delete(folder.id);
+  else next.add(folder.id);
+  folderSelection.value = next;
+  folderSelectMode.value = next.size > 0;
+};
+
+const selectAllFolders = () => {
+  folderSelection.value = new Set(props.subfolders.map((folder) => folder.id));
+  folderSelectMode.value = folderSelection.value.size > 0;
+};
+
+watch(() => props.currentFolderId, clearFolderSelection);
+
+const startFolderLongPress = (folder: FolderRecord, event: PointerEvent) => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  if (longPressTimer.value !== null) window.clearTimeout(longPressTimer.value);
+  longPressTriggered.value = false;
+  longPressTimer.value = window.setTimeout(() => {
+    longPressTriggered.value = true;
+    toggleFolderSelection(folder);
+    longPressTimer.value = null;
+  }, 520);
+};
+
+const cancelFolderLongPress = () => {
+  if (longPressTimer.value !== null) {
+    window.clearTimeout(longPressTimer.value);
+    longPressTimer.value = null;
+  }
+};
+
+const handleFolderCardClick = (folder: FolderRecord) => {
+  if (longPressTriggered.value) {
+    longPressTriggered.value = false;
+    return;
+  }
+  if (folderSelectMode.value) toggleFolderSelection(folder);
+  else emit('enterFolder', folder.id);
+};
+
+const folderMoveOptions = computed(() => {
+  const selected = selectedFolders.value;
+  const blocked = new Set(selected.map((folder) => folder.id));
+  for (const source of selected) {
+    let frontier = [source.id];
+    while (frontier.length) {
+      const next: string[] = [];
+      for (const folder of props.folders) {
+        if (folder.parent_id && frontier.includes(folder.parent_id) && !blocked.has(folder.id)) {
+          blocked.add(folder.id);
+          next.push(folder.id);
+        }
+      }
+      frontier = next;
+    }
+  }
+  return props.folderOptions.filter((option) => !blocked.has(option.id));
+});
+
+const openFolderMove = () => {
+  if (!selectedFolders.value.length) return;
+  folderMoveTarget.value = selectedFolders.value[0].parent_id ?? '__root__';
   folderMoveOpen.value = true;
 };
 
 const closeFolderMove = () => {
   folderMoveOpen.value = false;
-  folderMoveSource.value = null;
 };
 
 const submitFolderMove = () => {
-  const folder = folderMoveSource.value;
-  if (!folder) return;
+  const selected = selectedFolders.value;
+  if (!selected.length) return;
   const target = folderMoveTarget.value === '__root__' ? null : folderMoveTarget.value;
-  emit('moveFolder', folder, target);
+  emit('batchMoveFolders', selected, target);
   closeFolderMove();
+  clearFolderSelection();
 };
+
+const batchRename = () => {
+  if (selectedFolders.value.length !== 1) return;
+  emit('batchRenameFolder', selectedFolders.value[0]);
+  clearFolderSelection();
+};
+
+const batchDelete = () => {
+  if (!selectedFolders.value.length) return;
+  emit('batchDeleteFolders', selectedFolders.value);
+  clearFolderSelection();
+};
+
+const batchToggleVisibility = () => {
+  if (!selectedFolders.value.length) return;
+  emit('batchToggleFolderVisibility', selectedFolders.value);
+  clearFolderSelection();
+};
+
+onBeforeUnmount(cancelFolderLongPress);
 
 const handleTileClick = (img: ImageRecord) => {
   if (shouldSuppressClick()) return;
@@ -133,18 +214,47 @@ const handleTileClick = (img: ImageRecord) => {
           <p>{{ subfolders.length }} 个子文件夹 · 图片数量包含所有下级文件夹</p>
         </div>
       </header>
+      <div v-if="folderSelectMode || selectedFolders.length" class="folder-selection-toolbar" role="toolbar" aria-label="文件夹批量操作">
+        <div class="folder-selection-info">
+          <strong>已选择 {{ selectedFolders.length }} 个文件夹</strong>
+          <span>可整体移动、修改公开状态或删除</span>
+        </div>
+        <div class="folder-selection-actions">
+          <button type="button" class="folder-batch-btn" @click="selectAllFolders">全选</button>
+          <button type="button" class="folder-batch-btn" :disabled="selectedFolders.length !== 1" @click="batchRename">重命名</button>
+          <button type="button" class="folder-batch-btn" :disabled="selectedFolders.length === 0 || hasNestedSelection" :title="hasNestedSelection ? '请不要同时选择父文件夹和其子文件夹' : ''" @click="openFolderMove">移动</button>
+          <button type="button" class="folder-batch-btn" :disabled="selectedFolders.length === 0" @click="batchToggleVisibility">公开/私有</button>
+          <button type="button" class="folder-batch-btn danger" :disabled="selectedFolders.some((folder) => folder.image_count > 0 || folder.child_count > 0)" @click="batchDelete">删除</button>
+          <button type="button" class="folder-batch-btn ghost" @click="clearFolderSelection">取消</button>
+        </div>
+      </div>
       <div class="folder-grid">
       <article
         v-for="folder in subfolders"
         :key="folder.id"
         class="folder-card"
+        :class="{ 'is-selected': folderSelection.has(folder.id), 'is-select-mode': folderSelectMode }"
         tabindex="0"
         role="button"
-        :aria-label="`进入 ${folder.name}`"
-        @click="emit('enterFolder', folder.id)"
-        @keydown.enter.prevent="emit('enterFolder', folder.id)"
-        @keydown.space.prevent="emit('enterFolder', folder.id)"
+        :aria-label="folderSelectMode ? `选择 ${folder.name}` : `进入 ${folder.name}`"
+        @pointerdown="startFolderLongPress(folder, $event)"
+        @pointerup="cancelFolderLongPress"
+        @pointercancel="cancelFolderLongPress"
+        @pointerleave="cancelFolderLongPress"
+        @click="handleFolderCardClick(folder)"
+        @keydown.enter.prevent="handleFolderCardClick(folder)"
+        @keydown.space.prevent="toggleFolderSelection(folder)"
       >
+        <button
+          type="button"
+          class="folder-select-check"
+          :class="{ 'is-on': folderSelection.has(folder.id) }"
+          :aria-label="folderSelection.has(folder.id) ? '取消选择文件夹' : '选择文件夹'"
+          @pointerdown.stop="cancelFolderLongPress"
+          @click.stop="toggleFolderSelection(folder)"
+        >
+          <svg v-if="folderSelection.has(folder.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7" /></svg>
+        </button>
         <div class="folder-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 4h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
@@ -161,24 +271,12 @@ const handleTileClick = (img: ImageRecord) => {
               :aria-label="folder.is_public !== 0 ? '文件夹当前公开，点击设为私有' : '文件夹当前私有，点击设为公开'"
               @click.stop="emit('toggleFolderVisibility', folder)"
             >
-              <svg v-if="folder.is_public !== 0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
-                <circle cx="12" cy="12" r="2.5" />
-              </svg>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="5" y="10" width="14" height="10" rx="2" />
-                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-              </svg>
+              <svg v-if="folder.is_public !== 0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.5" /></svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
               <span>{{ folder.is_public !== 0 ? '公开' : '私有' }}</span>
             </button>
           </div>
           <p class="folder-meta">包含 {{ folder.image_count }} 张图片 · {{ folder.child_count }} 个直接子目录</p>
-          <div class="folder-actions-row">
-            <button type="button" class="folder-action-btn primary" @click.stop="emit('enterFolder', folder.id)">进入</button>
-            <button type="button" class="folder-action-btn" @click.stop="emit('renameFolder', folder)">重命名</button>
-            <button type="button" class="folder-action-btn" @click.stop="openFolderMove(folder)">移动</button>
-            <button type="button" class="folder-action-btn danger" :disabled="folder.image_count > 0 || folder.child_count > 0" :title="folder.image_count > 0 || folder.child_count > 0 ? '请先清空图片和子目录' : '删除空文件夹'" @click.stop="emit('deleteFolder', folder)">删除</button>
-          </div>
         </div>
       </article>
       </div>
@@ -263,8 +361,8 @@ const handleTileClick = (img: ImageRecord) => {
         <header class="folder-dialog-heading">
           <div>
             <span class="folder-dialog-kicker">文件夹整体操作</span>
-            <h2 id="folder-move-title">移动「{{ folderMoveSource?.name }}」</h2>
-            <p>移动的是整个文件夹，里面的图片和子文件夹会一起保留。</p>
+            <h2 id="folder-move-title">移动 {{ selectedFolders.length }} 个文件夹</h2>
+            <p>所选文件夹中的图片和子文件夹都会一起保留。</p>
           </div>
           <button type="button" class="folder-dialog-close" aria-label="关闭" @click="closeFolderMove">×</button>
         </header>

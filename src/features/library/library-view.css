@@ -1141,3 +1141,91 @@
     grid-template-columns:1fr 1fr;
   }
 }
+
+/* ===== Folder selection / batch operations ===== */
+.folder-selection-toolbar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+  margin:0 0 .9rem;
+  padding:.7rem .8rem;
+  border:1px solid rgba(53,243,255,.20);
+  border-radius:12px;
+  background:linear-gradient(90deg,rgba(53,243,255,.08),rgba(168,85,247,.05));
+}
+
+.folder-selection-info {
+  display:flex;
+  flex-direction:column;
+  gap:.15rem;
+  min-width:0;
+}
+.folder-selection-info strong { font-size:.85rem; color:#e7fbff; }
+.folder-selection-info span { font-size:.72rem; color:rgba(203,213,225,.62); }
+.folder-selection-actions { display:flex; flex-wrap:wrap; gap:.4rem; justify-content:flex-end; }
+.folder-batch-btn {
+  min-height:2.1rem;
+  padding:.35rem .7rem;
+  border:1px solid rgba(148,163,184,.2);
+  border-radius:8px;
+  background:rgba(7,13,27,.78);
+  color:rgba(226,232,240,.88);
+  font:inherit;
+  font-size:.72rem;
+  font-weight:700;
+  cursor:pointer;
+}
+.folder-batch-btn:hover:not(:disabled), .folder-batch-btn:focus-visible:not(:disabled) {
+  border-color:rgba(53,243,255,.48);
+  background:rgba(53,243,255,.08);
+  outline:none;
+}
+.folder-batch-btn.danger { color:#fda4af; border-color:rgba(251,113,133,.2); }
+.folder-batch-btn.ghost { color:rgba(203,213,225,.65); }
+.folder-batch-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+.folder-select-check {
+  position:absolute;
+  top:.65rem;
+  left:.65rem;
+  z-index:3;
+  width:1.65rem;
+  height:1.65rem;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid rgba(148,163,184,.28);
+  border-radius:50%;
+  background:rgba(4,10,22,.72);
+  color:#06141c;
+  cursor:pointer;
+  opacity:0;
+  transform:scale(.9);
+  transition:opacity .16s ease,transform .16s ease,background .16s ease,border-color .16s ease;
+}
+.folder-select-check svg { width:14px; height:14px; }
+.folder-card:hover .folder-select-check,
+.folder-card:focus-visible .folder-select-check,
+.folder-card.is-select-mode .folder-select-check,
+.folder-card.is-selected .folder-select-check { opacity:1; transform:scale(1); }
+.folder-select-check.is-on { background:#35f3ff; border-color:#35f3ff; }
+.folder-card.is-selected {
+  border-color:rgba(53,243,255,.65) !important;
+  box-shadow:0 0 0 1px rgba(53,243,255,.18),0 10px 30px rgba(0,0,0,.18);
+}
+.folder-card.is-select-mode { cursor:pointer; }
+.folder-card.is-select-mode .folder-name { padding-left:2rem; }
+.folder-card { touch-action:pan-y; user-select:none; }
+
+/* The card itself is the action target; keep the previous four-button row out of the way. */
+.folder-actions-row { display:none !important; }
+
+@media (max-width:768px) {
+  .folder-selection-toolbar { align-items:stretch; flex-direction:column; padding:.7rem; }
+  .folder-selection-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .folder-batch-btn { width:100%; min-height:2.35rem; }
+  .folder-selection-actions .ghost { grid-column:1 / -1; }
+  .folder-select-check { opacity:1; transform:scale(1); width:1.8rem; height:1.8rem; }
+  .folder-card.is-select-mode .folder-name { padding-left:2.15rem; }
+}
