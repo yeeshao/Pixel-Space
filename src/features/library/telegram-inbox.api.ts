@@ -1,4 +1,5 @@
 import type { ImageRecord } from '@/features/images/image.types';
+import type { UploadExif } from '@/features/upload/upload.types';
 import { readHttpError } from '@/shared/api/http';
 
 export function listTelegramInbox(): Promise<ImageRecord[]> {
@@ -11,7 +12,7 @@ export function listTelegramInbox(): Promise<ImageRecord[]> {
 export interface TelegramProcessPayload {
   compressed: File;
   dimensions: { width: number; height: number };
-  exif: Record<string, unknown>;
+  exif: UploadExif;
   meta: {
     title: string;
     caption: string;
@@ -27,6 +28,7 @@ export interface TelegramProcessPayload {
     composition: string;
     is_public: 0 | 1;
     location_public: 0 | 1;
+    folder_id: string | null;
   };
   ai?: {
     failed: boolean;
