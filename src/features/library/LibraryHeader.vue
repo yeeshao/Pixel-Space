@@ -12,6 +12,7 @@ defineProps<{
   breadcrumb: Array<{ id: string | null; name: string }>;
   currentFolder: FolderRecord | null;
   currentFolderId: string | null;
+  currentVirtual: VirtualFolder | null;
   virtualCounts: Record<VirtualFolder['id'], number>;
 }>();
 

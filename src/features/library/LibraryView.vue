@@ -62,6 +62,7 @@ const {
   handleDeleteDownloadGrant,
   handleCreateFolder,
   handleRenameCurrent,
+  handleToggleFolderVisibility,
   handleDeleteCurrent,
   handleMove,
   handleBatchDelete,
