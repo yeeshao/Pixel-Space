@@ -15,6 +15,27 @@ export interface FolderRecord extends FolderRow {
 // SQL：拉所有文件夹并左联图片表统计直接子图片数 + 直接子目录数。
 // 不递归汇总：每个文件夹只看自己一层，UI 显示的「文件夹大小」由调用方自行决定要不要展开。
 export const LIST_FOLDERS_SQL = `
+WITH RECURSIVE
+descendants(root_id, id) AS (
+  SELECT id, id
+  FROM folders
+  UNION ALL
+  SELECT d.root_id, f.id
+  FROM descendants d
+  JOIN folders f ON f.parent_id = d.id
+),
+image_counts AS (
+  SELECT d.root_id AS folder_id, COUNT(i.id) AS image_count
+  FROM descendants d
+  LEFT JOIN images i ON i.folder_id = d.id
+  GROUP BY d.root_id
+),
+child_counts AS (
+  SELECT parent_id, COUNT(*) AS child_count
+  FROM folders
+  WHERE parent_id IS NOT NULL
+  GROUP BY parent_id
+)
 SELECT
   f.id,
   f.parent_id,
@@ -25,18 +46,8 @@ SELECT
   COALESCE(image_counts.image_count, 0) AS image_count,
   COALESCE(child_counts.child_count, 0) AS child_count
 FROM folders f
-LEFT JOIN (
-  SELECT folder_id, COUNT(*) AS image_count
-  FROM images
-  WHERE folder_id IS NOT NULL
-  GROUP BY folder_id
-) image_counts ON image_counts.folder_id = f.id
-LEFT JOIN (
-  SELECT parent_id, COUNT(*) AS child_count
-  FROM folders
-  WHERE parent_id IS NOT NULL
-  GROUP BY parent_id
-) child_counts ON child_counts.parent_id = f.id
+LEFT JOIN image_counts ON image_counts.folder_id = f.id
+LEFT JOIN child_counts ON child_counts.parent_id = f.id
 ORDER BY f.parent_id, f.name COLLATE NOCASE
 `;
 
@@ -62,13 +73,21 @@ visible_folders(id) AS (
   JOIN visible_folders vf ON vf.id = child.id
   WHERE parent.is_public = 1
 ),
+descendants(root_id, id) AS (
+  SELECT id, id
+  FROM folders
+  WHERE id IN (SELECT id FROM visible_folders)
+  UNION ALL
+  SELECT d.root_id, f.id
+  FROM descendants d
+  JOIN folders f ON f.parent_id = d.id
+  WHERE f.is_public = 1
+),
 image_counts AS (
-  SELECT i.folder_id, COUNT(*) AS image_count
-  FROM images i
-  WHERE i.folder_id IS NOT NULL
-    AND i.is_public = 1
-    AND i.folder_id IN (SELECT id FROM visible_folders)
-  GROUP BY i.folder_id
+  SELECT d.root_id AS folder_id, COUNT(i.id) AS image_count
+  FROM descendants d
+  LEFT JOIN images i ON i.folder_id = d.id AND i.is_public = 1
+  GROUP BY d.root_id
 ),
 child_counts AS (
   SELECT f.parent_id, COUNT(*) AS child_count
