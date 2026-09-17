@@ -14,27 +14,6 @@ export interface FolderRecord extends FolderRow {
 
 // SQL：递归统计文件夹自身及所有子目录图片数量。
 export const LIST_FOLDERS_SQL = `
-WITH RECURSIVE
-descendants(root_id, id) AS (
-  SELECT id, id
-  FROM folders
-  UNION
-  SELECT d.root_id, f.id
-  FROM descendants d
-  JOIN folders f ON f.parent_id = d.id
-),
-image_counts AS (
-  SELECT d.root_id AS folder_id, COUNT(i.id) AS image_count
-  FROM descendants d
-  LEFT JOIN images i ON i.folder_id = d.id
-  GROUP BY d.root_id
-),
-child_counts AS (
-  SELECT parent_id, COUNT(*) AS child_count
-  FROM folders
-  WHERE parent_id IS NOT NULL
-  GROUP BY parent_id
-)
 SELECT
   f.id,
   f.parent_id,
@@ -42,13 +21,18 @@ SELECT
   f.created_at,
   f.updated_at,
   f.is_public,
-  COALESCE(image_counts.image_count, 0) AS image_count,
-  COALESCE(child_counts.child_count, 0) AS child_count
+  COALESCE(COUNT(i.key), 0) AS image_count,
+  COALESCE((
+    SELECT COUNT(*)
+    FROM folders c
+    WHERE c.parent_id = f.id
+  ), 0) AS child_count
 FROM folders f
-LEFT JOIN image_counts ON image_counts.folder_id = f.id
-LEFT JOIN child_counts ON child_counts.parent_id = f.id
+LEFT JOIN images i ON i.folder_id = f.id
+GROUP BY f.id
 ORDER BY f.parent_id, f.name COLLATE NOCASE
 `;
+
 
 // 公开探索页只展示至少包含一张公开图片的目录分支。
 // 父目录自己没有图片、但后代目录有公开图片时仍保留，避免子目录在树里失去入口。
