@@ -72,7 +72,14 @@ const handleTileClick = (img: ImageRecord) => {
   />
 
   <template v-else>
-    <section v-if="subfolders.length > 0" class="folder-grid" aria-label="文件夹">
+    <section v-if="subfolders.length > 0" class="content-panel folders-panel" aria-label="实际文件夹">
+      <header class="content-panel-heading">
+        <div>
+          <h2>实际文件夹</h2>
+          <p>{{ subfolders.length }} 个子文件夹 · 图片数量包含所有下级文件夹</p>
+        </div>
+      </header>
+      <div class="folder-grid">
       <article
         v-for="folder in subfolders"
         :key="folder.id"
@@ -95,19 +102,35 @@ const handleTileClick = (img: ImageRecord) => {
             <button
               type="button"
               class="folder-visibility"
-              :class="{ 'is-public': folder.is_public !== 0 }"
+              :class="{ 'is-public': folder.is_public !== 0, 'is-private': folder.is_public === 0 }"
               :title="folder.is_public !== 0 ? '点击设为私有' : '点击设为公开'"
+              :aria-label="folder.is_public !== 0 ? '文件夹当前公开，点击设为私有' : '文件夹当前私有，点击设为公开'"
               @click.stop="emit('toggleFolderVisibility', folder)"
             >
-              {{ folder.is_public !== 0 ? '公开' : '私有' }}
+              <svg v-if="folder.is_public !== 0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+                <circle cx="12" cy="12" r="2.5" />
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="5" y="10" width="14" height="10" rx="2" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+              </svg>
+              <span>{{ folder.is_public !== 0 ? '公开' : '私有' }}</span>
             </button>
           </div>
-          <p class="folder-meta">{{ folder.image_count }} 张图片 · {{ folder.child_count }} 个子目录</p>
+          <p class="folder-meta">包含 {{ folder.image_count }} 张图片 · {{ folder.child_count }} 个直接子目录</p>
         </div>
       </article>
+      </div>
     </section>
 
-    <section v-if="currentImages.length > 0" class="image-section">
+    <section v-if="currentImages.length > 0" class="content-panel image-section">
+      <header class="content-panel-heading image-section-title">
+        <div>
+          <h2>照片</h2>
+          <p>当前目录直接存放的图片</p>
+        </div>
+      </header>
       <header class="image-section-header">
         <span class="section-label">本目录图片 · {{ currentImages.length }}</span>
         <SelectPopover v-model="sortMode" :options="imageSortOptions" aria-label="排序方式">

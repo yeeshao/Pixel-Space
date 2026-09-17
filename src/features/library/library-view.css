@@ -640,3 +640,176 @@
   .smart-directory-panel .folder-card { grid-template-columns:2rem minmax(0,1fr); }
   .image-stats-grid { grid-template-columns:1fr 1fr; }
 }
+
+
+/* ===== Dashboard polish: folders / path / actions ===== */
+.content-panel {
+  width: 100%;
+  box-sizing: border-box;
+  padding: .85rem;
+  border: 1px solid rgba(53,243,255,.12);
+  border-radius: 8px;
+  background: rgba(7,7,19,.34);
+}
+.content-panel-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  margin:0 0 .7rem;
+}
+.content-panel-heading h2 {
+  margin:0;
+  color:white;
+  font-size:.88rem;
+  font-weight:900;
+}
+.content-panel-heading p {
+  margin:.2rem 0 0;
+  color:rgba(148,163,184,.68);
+  font-size:.68rem;
+}
+.folders-panel .folder-grid {
+  grid-template-columns:repeat(auto-fill,minmax(18rem,1fr));
+  gap:.65rem;
+}
+.folders-panel .folder-card {
+  min-width:0;
+  min-height:4.9rem;
+  grid-template-columns:2.35rem minmax(0,1fr);
+  padding:.8rem;
+}
+.folders-panel .folder-name-row {
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  min-width:0;
+}
+.folders-panel .folder-name {
+  flex:1;
+  min-width:0;
+}
+.folders-panel .folder-meta {
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* 公开/私有按钮：改成高对比胶囊徽章，避免在深色背景里看不见。 */
+.folder-visibility {
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.25rem;
+  min-width:3.55rem;
+  height:1.7rem;
+  padding:0 .48rem;
+  border:1px solid rgba(148,163,184,.42);
+  border-radius:999px;
+  background:rgba(15,23,42,.9);
+  color:rgb(226,232,240);
+  font-size:.68rem;
+  font-weight:900;
+  line-height:1;
+  cursor:pointer;
+  box-shadow:0 0 0 1px rgba(0,0,0,.16) inset;
+  transition:transform 150ms ease,border-color 150ms ease,background 150ms ease,box-shadow 150ms ease;
+}
+.folder-visibility svg { width:13px; height:13px; flex:0 0 auto; }
+.folder-visibility.is-public {
+  border-color:rgba(53,243,255,.72);
+  background:rgba(53,243,255,.16);
+  color:rgb(165,243,252);
+  box-shadow:0 0 12px rgba(53,243,255,.1);
+}
+.folder-visibility.is-private {
+  border-color:rgba(251,191,36,.62);
+  background:rgba(251,191,36,.12);
+  color:rgb(253,230,138);
+}
+.folder-visibility:hover,
+.folder-visibility:focus-visible {
+  transform:translateY(-1px);
+  outline:none;
+  border-color:currentColor;
+  box-shadow:0 0 0 2px rgba(255,255,255,.05);
+}
+
+/* 当前路径：压缩成更清晰的导航条，不再占一整块大空白。 */
+.path-panel {
+  padding:.72rem .85rem;
+}
+.path-panel .dashboard-panel-heading {
+  margin-bottom:.45rem;
+}
+.path-panel .breadcrumb {
+  min-height:2rem;
+  padding:.25rem .35rem;
+  border:1px solid rgba(53,243,255,.09);
+  border-radius:6px;
+  background:rgba(3,7,18,.5);
+}
+.path-panel .crumb {
+  padding:.28rem .45rem;
+}
+
+/* 文件夹管理按钮统一高度、宽度与间距。 */
+.folder-actions-panel {
+  padding:.72rem .85rem;
+}
+.folder-actions-panel .dashboard-panel-heading {
+  margin-bottom:.5rem;
+}
+.folder-actions-panel .library-actions {
+  gap:.6rem;
+}
+.folder-actions-panel .library-btn {
+  width:100%;
+  min-width:0;
+  height:36px;
+}
+.folder-actions-panel .library-btn:not(.danger) {
+  border-color:rgba(53,243,255,.2);
+}
+.folder-actions-panel .library-btn.danger {
+  border-color:rgba(251,113,133,.26);
+}
+
+.image-section {
+  gap:.7rem;
+}
+.image-section-title {
+  margin-bottom:0;
+}
+.image-section > .image-section-header {
+  padding:.5rem .55rem;
+  border:1px solid rgba(53,243,255,.08);
+  border-radius:6px;
+  background:rgba(3,7,18,.35);
+}
+
+@media (max-width:720px) {
+  .content-panel { padding:.7rem; }
+  .content-panel-heading { align-items:flex-start; }
+  .folders-panel .folder-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
+  .folders-panel .folder-card {
+    grid-template-columns:2rem minmax(0,1fr);
+    gap:.55rem;
+    min-height:4.8rem;
+    padding:.65rem;
+  }
+  .folders-panel .folder-icon { width:2rem; height:2rem; }
+  .folder-visibility { min-width:3.3rem; height:1.6rem; padding:0 .4rem; font-size:.64rem; }
+  .path-panel .dashboard-panel-heading,
+  .folder-actions-panel .dashboard-panel-heading { align-items:center; }
+  .folder-actions-panel .library-actions { grid-template-columns:1fr 1fr; }
+}
+
+@media (max-width:480px) {
+  .folders-panel .folder-grid { grid-template-columns:1fr; }
+  .folders-panel .folder-card { min-height:4.5rem; }
+  .folder-actions-panel .library-actions { grid-template-columns:1fr; }
+  .folder-actions-panel .library-btn:last-child { grid-column:auto; }
+  .path-panel .breadcrumb { padding:.2rem; }
+}
