@@ -62,6 +62,8 @@ const {
   handleDeleteCurrent,
   handleMove,
   handleBatchDelete,
+  handleBatchLocation,
+  handleBatchAi,
   saveAiSettings,
 } = useLibraryActions({
   folders,
