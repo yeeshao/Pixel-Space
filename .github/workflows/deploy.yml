@@ -1,0 +1,112 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pixel-space-production
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
+  WRANGLER_VERSION: 4.92.0
+  CF_PAGES_PROJECT: pixel-space
+  D1_DATABASE: pixel-space
+
+jobs:
+  deploy:
+    name: Build, migrate D1, deploy Pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build
+        run: pnpm build
+
+      - name: Check Cloudflare authentication
+        run: pnpm exec wrangler whoami
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # 这个仓库最初支持通过 db/schema.sql 手工初始化 D1。
+      # 如果生产库已经存在 0001~0004 的结构，但没有 d1_migrations，
+      # 先自动建立迁移基线，避免 CI 再次执行 0001~0004 导致表已存在错误。
+      - name: Bootstrap existing D1 migration history if needed
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+
+          echo "Checking production D1 migration history..."
+          TABLES_JSON="$(pnpm exec wrangler d1 execute "$D1_DATABASE" --remote --command='SELECT name FROM sqlite_master WHERE type = "table" AND name IN ("folders","images","ai_settings","download_grants","download_grant_images","d1_migrations") ORDER BY name;' --json)"
+          echo "$TABLES_JSON"
+
+          TABLE_COUNT="$(printf '%s' "$TABLES_JSON" | jq '[.[].results[]? | .name] | length')"
+          HAS_MIGRATIONS="$(printf '%s' "$TABLES_JSON" | jq '[.[].results[]? | select(.name == "d1_migrations")] | length')"
+
+          if [ "$HAS_MIGRATIONS" -gt 0 ]; then
+            echo "d1_migrations already exists; normal migration flow will be used."
+            exit 0
+          fi
+
+          if [ "$TABLE_COUNT" -eq 0 ]; then
+            echo "Production D1 is empty; normal migration flow will create the schema."
+            exit 0
+          fi
+
+          echo "Existing D1 schema detected without d1_migrations."
+          echo "Verifying the schema matches Pixel-Space migrations 0001~0004..."
+
+          VERIFY_JSON="$(pnpm exec wrangler d1 execute "$D1_DATABASE" --remote --command='SELECT
+            (SELECT COUNT(*) FROM sqlite_master WHERE type="table" AND name IN ("folders","images","ai_settings","download_grants","download_grant_images")) AS table_count,
+            (SELECT COUNT(*) FROM pragma_table_info("images") WHERE name="location_region") AS location_region_count,
+            (SELECT COUNT(*) FROM pragma_table_info("download_grants") WHERE name="code") AS grant_code_count;' --json)"
+          echo "$VERIFY_JSON"
+
+          VERIFIED="$(printf '%s' "$VERIFY_JSON" | jq -r '.[0].results[0] | if (.table_count == 5 and .location_region_count == 1 and .grant_code_count == 1) then "yes" else "no" end')"
+
+          if [ "$VERIFIED" != "yes" ]; then
+            echo "ERROR: Existing D1 does not match the expected 0001~0004 schema."
+            echo "Refusing to create a migration baseline automatically."
+            exit 1
+          fi
+
+          echo "Creating d1_migrations baseline for 0001~0004..."
+          pnpm exec wrangler d1 execute "$D1_DATABASE" --remote --command='CREATE TABLE IF NOT EXISTS d1_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL); INSERT OR IGNORE INTO d1_migrations (name) VALUES ("0001_init.sql"), ("0002_location_region.sql"), ("0003_download_grants.sql"), ("0004_download_grant_codes.sql");'
+
+      - name: Apply pending D1 migrations
+        run: pnpm db:migrate:remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy to Cloudflare Pages
+        run: pnpm exec wrangler pages deploy dist --project-name "$CF_PAGES_PROJECT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
