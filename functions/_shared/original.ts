@@ -56,7 +56,7 @@ export const handleOriginalGet = async (
       return new Response(JSON.stringify({
         error: 'original_not_archived',
         message: row.tg_status === 'failed'
-          ? '原图归档失败，请重新归档',
+          ? '原图归档失败，请重新归档'
           : '该图片暂无 Telegram 原图归档',
         tg_status: row.tg_status ?? 'unknown',
         tg_error: row.tg_error ?? null,
