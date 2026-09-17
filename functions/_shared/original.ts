@@ -11,10 +11,12 @@ export interface OriginalImageRow {
   tg_file_id: string | null;
 }
 
-const ORIGINAL_SQL = 'SELECT key, title, original_filename, tg_file_id FROM images WHERE key = ?';
+const ORIGINAL_SQL = 'SELECT key, title, original_filename, tg_file_id, tg_status, tg_error FROM images WHERE key = ?';
 
 interface OriginalRow extends OriginalImageRow {
   title: string;
+  tg_status?: string | null;
+  tg_error?: string | null;
 }
 
 export function downloadName(name: string): string {
@@ -50,7 +52,19 @@ export const handleOriginalGet = async (
     if (!row) return notFound();
 
     const response = await streamTelegramOriginal(env.TG_BOT_TOKEN, row);
-    if (!response) return notFound('original_not_archived');
+    if (!response) {
+      return new Response(JSON.stringify({
+        error: 'original_not_archived',
+        message: row.tg_status === 'failed'
+          ? '原图归档失败，请重新归档',
+          : '该图片暂无 Telegram 原图归档',
+        tg_status: row.tg_status ?? 'unknown',
+        tg_error: row.tg_error ?? null,
+      }), {
+        status: 404,
+        headers: { 'content-type': 'application/json; charset=utf-8' },
+      });
+    }
 
     return response;
   } catch (error) {
