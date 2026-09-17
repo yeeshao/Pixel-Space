@@ -79,6 +79,37 @@ export const useLibraryDirectory = ({ folders, images, downloadGrants }: UseLibr
 
   const currentImages = computed<ImageRecord[]>(() => sortImagesByMode(filteredCurrentImages.value, sortMode.value));
 
+  // 图片统计：目录自身图片 + 全部后代目录图片。根目录的递归总数就是整个图库的图片总数。
+  const imageStats = computed(() => {
+    const directByFolder = new Map<string | null, number>();
+    for (const image of images.value) {
+      const folderId = image.folder_id ?? null;
+      directByFolder.set(folderId, (directByFolder.get(folderId) ?? 0) + 1);
+    }
+
+    const recursiveByFolder = new Map<string, number>();
+    const calc = (folderId: string): number => {
+      const cached = recursiveByFolder.get(folderId);
+      if (cached !== undefined) return cached;
+      let total = directByFolder.get(folderId) ?? 0;
+      for (const child of foldersByParent.value.get(folderId) ?? []) total += calc(child.id);
+      recursiveByFolder.set(folderId, total);
+      return total;
+    };
+    for (const folder of folders.value) calc(folder.id);
+
+    return {
+      rootDirect: directByFolder.get(null) ?? 0,
+      rootRecursive: images.value.length,
+      currentDirect: currentFolderId.value === null ? (directByFolder.get(null) ?? 0) : (directByFolder.get(currentFolderId.value) ?? 0),
+      currentRecursive: currentFolderId.value === null ? images.value.length : (recursiveByFolder.get(currentFolderId.value) ?? 0),
+      totalImages: images.value.length,
+      totalFolders: folders.value.length,
+      publicImages: images.value.filter((img) => Number(img.is_public) === 1).length,
+      privateImages: images.value.filter((img) => Number(img.is_public) === 0).length,
+    };
+  });
+
   const currentFolder = computed<FolderRecord | null>(() =>
     currentFolderId.value && !isVirtualId(currentFolderId.value)
       ? foldersById.value.get(currentFolderId.value) ?? null
@@ -134,6 +165,7 @@ export const useLibraryDirectory = ({ folders, images, downloadGrants }: UseLibr
     foldersByParent,
     subfolders,
     virtualCounts,
+    imageStats,
     filteredCurrentImages,
     currentImages,
     currentFolder,

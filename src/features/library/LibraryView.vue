@@ -28,6 +28,7 @@ const {
   sortMode,
   subfolders,
   virtualCounts,
+  imageStats,
   currentImages,
   currentFolder,
   currentVirtual,
@@ -62,8 +63,8 @@ const {
   handleDeleteDownloadGrant,
   handleCreateFolder,
   handleRenameCurrent,
-  handleToggleFolderVisibility,
   handleDeleteCurrent,
+  handleToggleFolderVisibility,
   handleMove,
   handleBatchDelete,
   handleBatchLocation,
@@ -115,6 +116,8 @@ onMounted(refreshAll);
   <AppShell fluid>
     <section class="library-page">
       <LibraryHeader
+        :ai-settings-form="aiSettingsForm"
+        :ai-settings-saving="aiSettingsSaving"
         :breadcrumb="breadcrumb"
         :current-folder="currentFolder"
         :current-folder-id="currentFolderId"
@@ -125,7 +128,12 @@ onMounted(refreshAll);
         @rename-current="handleRenameCurrent"
         @delete-current="handleDeleteCurrent"
         @refresh="refreshAll"
-      />
+        @save-ai-settings="saveAiSettings"
+      >
+        <template #telegram>
+          <TelegramInboxPanel @processed="refreshAll" />
+        </template>
+      </LibraryHeader>
 
       <p v-if="actionMessage" class="action-toast">{{ actionMessage }}</p>
 
@@ -137,6 +145,7 @@ onMounted(refreshAll);
         v-model:sort-mode="sortMode"
         :current-folder-id="currentFolderId"
         :current-images="currentImages"
+        :image-stats="imageStats"
         :current-readonly="currentReadonly"
         :current-virtual="currentVirtual"
         :download-grants="downloadGrants"
@@ -155,23 +164,7 @@ onMounted(refreshAll);
         @toggle-folder-visibility="handleToggleFolderVisibility"
       />
 
-      <TelegramInboxPanel @processed="refreshAll" />
 
-      <section class="ai-settings-panel library-ai-panel" aria-labelledby="ai-settings-title">
-        <form class="ai-settings-form" @submit.prevent="saveAiSettings">
-          <div class="ai-settings-heading">
-            <h2 id="ai-settings-title">AI 配置</h2>
-            <button type="submit" class="library-btn primary" :disabled="aiSettingsSaving">
-              {{ aiSettingsSaving ? '保存中…' : '保存' }}
-            </button>
-          </div>
-          <div class="settings-grid">
-            <label class="settings-field"><span>Proxy URL</span><input v-model="aiSettingsForm.proxy_url" class="settings-input" type="url" autocomplete="off" placeholder="https://example.test/v1/chat/completions" /></label>
-            <label class="settings-field"><span>Model</span><input v-model="aiSettingsForm.model" class="settings-input" type="text" autocomplete="off" placeholder="gpt-4.1-mini" /></label>
-          </div>
-          <label class="settings-field settings-prompt-field"><span>Prompt</span><textarea v-model="aiSettingsForm.prompt" class="settings-input settings-textarea" autocomplete="off" spellcheck="false" placeholder="编辑图片分析系统提示词" /></label>
-        </form>
-      </section>
 
       <LibraryMoveBar
         v-model:move-target="moveTarget"
