@@ -339,7 +339,7 @@ export const useUploadProcessing = ({
       exif: entry.exif,
       meta: { ...entry.meta, folder_id: batchFolderId.value || null },
       dimensions: entry.compressedDimensions,
-      originalDimensions: entry.originalDimensions,
+      originalDimensions: entry.originalDimensions ?? entry.compressedDimensions,
     });
 
     entry.status = 'uploading';
