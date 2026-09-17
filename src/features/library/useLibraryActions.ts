@@ -297,42 +297,63 @@ export const useLibraryActions = ({
     }
   };
 
-  const handleBatchLocation = async () => {
+  const handleBatchLocation = async (payload: {
+    location_name: string | null;
+    location_lat: number | null;
+    location_lng: number | null;
+    location_region: 'china' | 'global' | null;
+  }) => {
     if (selectedKeys.value.size === 0) return;
-    const locationName = window.prompt('地点名称（可留空）')?.trim();
-    if (locationName === undefined) return;
-    const coordinates = window.prompt('经纬度：纬度,经度（可留空，例如 31.2304,121.4737）')?.trim() ?? '';
-    let lat: number | null = null;
-    let lng: number | null = null;
-    if (coordinates) {
-      const parts = coordinates.split(',').map((v) => Number(v.trim()));
-      if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || parts[0] < -90 || parts[0] > 90 || parts[1] < -180 || parts[1] > 180) {
-        actionMessage.value = '经纬度格式错误';
-        return;
-      }
-      lat = parts[0]; lng = parts[1];
-    }
     try {
-      const result = await batchUpdateLocation({ keys: Array.from(selectedKeys.value), location_name: locationName || null, location_lat: lat, location_lng: lng, location_region: lat !== null && lng !== null && lng >= 73.5 && lng <= 135.1 && lat >= 3.5 && lat <= 53.6 ? 'china' : lat !== null && lng !== null ? 'global' : null });
+      const result = await batchUpdateLocation({
+        keys: Array.from(selectedKeys.value),
+        ...payload,
+      });
       images.value = images.value.map((img) => result.items.find((item) => item.key === img.key) ?? img);
+      const count = result.processed;
       selectedKeys.value = new Set();
-      actionMessage.value = `已批量设置 ${result.processed} 张图片的位置`;
-    } catch (error) { actionMessage.value = `批量设置位置失败：${(error as Error).message}`; }
+      actionMessage.value = `已批量设置 ${count} 张图片的位置`;
+    } catch (error) {
+      actionMessage.value = `批量设置位置失败：${(error as Error).message}`;
+    }
   };
 
   const handleBatchAi = async () => {
     const keys = Array.from(selectedKeys.value);
     if (!keys.length) return;
-    actionMessage.value = `AI 批量分析开始：0/${keys.length}`;
-    try {
-      for (let i = 0; i < keys.length; i += 5) {
-        const result = await batchAnalyzeAi(keys.slice(i, i + 5));
-        images.value = images.value.map((img) => result.items.find((item) => item.key === img.key) ?? img);
-        actionMessage.value = `AI 批量分析：${Math.min(i + result.processed, keys.length)}/${keys.length}`;
+
+    let processed = 0;
+    let failed = 0;
+    actionMessage.value = `AI 批量分析：0/${keys.length}`;
+
+    for (const key of keys) {
+      try {
+        const result = await batchAnalyzeAi([key]);
+        const updated = result.items.find((item) => item.key === key);
+        if (updated) {
+          images.value = images.value.map((img) => (img.key === key ? updated : img));
+        }
+        if (result.failed.includes(key) || updated?.ai_status === 'failed') {
+          failed += 1;
+        } else {
+          processed += 1;
+        }
+      } catch (error) {
+        failed += 1;
+        actionMessage.value = `AI 分析 ${processed + failed}/${keys.length} 失败：${(error as Error).message}`;
       }
-      selectedKeys.value = new Set();
-      actionMessage.value = `AI 批量分析完成：${keys.length} 张`;
-    } catch (error) { actionMessage.value = `AI 批量分析失败：${(error as Error).message}`; }
+
+      actionMessage.value = failed > 0
+        ? `AI 批量分析：${processed + failed}/${keys.length}，成功 ${processed}，失败 ${failed}`
+        : `AI 批量分析：${processed}/${keys.length}`;
+    }
+
+    if (failed === 0) {
+      actionMessage.value = `AI 批量分析完成：成功 ${processed} 张`;
+    } else {
+      actionMessage.value = `AI 批量分析完成：成功 ${processed} 张，失败 ${failed} 张，请查看图片 AI 状态后重试失败项`;
+    }
+    selectedKeys.value = new Set();
   };
 
   const saveAiSettings = async () => {

@@ -6,6 +6,7 @@ import type { ImageRecord } from '@/features/images/image.types';
 import DownloadGrantDialog from './DownloadGrantDialog.vue';
 import type { DownloadGrantRecord, FolderRecord } from './library.api';
 import LibraryContent from './LibraryContent.vue';
+import BatchLocationDialog from './BatchLocationDialog.vue';
 import LibraryHeader from './LibraryHeader.vue';
 import LibraryMoveBar from './LibraryMoveBar.vue';
 import { useLibraryActions } from './useLibraryActions';
@@ -19,6 +20,7 @@ const downloadGrants = ref<DownloadGrantRecord[]>([]);
 
 const lightboxOpen = ref(false);
 const lightboxImage = ref<ImageRecord | null>(null);
+const batchLocationOpen = ref(false);
 
 const {
   currentFolderId,
@@ -160,13 +162,19 @@ onMounted(refreshAll);
         :selected-count="selectedKeys.size"
         @open-grant="grantDialogOpen = true"
         @move="handleMove"
-        @batch-location="handleBatchLocation"
+        @batch-location="batchLocationOpen = true"
         @batch-ai="handleBatchAi"
         @delete="handleBatchDelete"
         @cancel="clearSelection"
       />
     </section>
 
+    <BatchLocationDialog
+      :open="batchLocationOpen"
+      :selected-count="selectedKeys.size"
+      @close="batchLocationOpen = false"
+      @save="async (payload) => { await handleBatchLocation(payload); batchLocationOpen = false; }"
+    />
     <ImageLightbox
       :open="lightboxOpen"
       :image="lightboxImage"

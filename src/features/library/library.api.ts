@@ -164,6 +164,7 @@ export interface BatchImagesResponse {
   ok: boolean;
   action: 'location' | 'ai';
   processed: number;
+  failed: string[];
   items: ImageRecord[];
 }
 

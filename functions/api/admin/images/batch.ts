@@ -8,7 +8,7 @@ import { requireSameOrigin } from '../../../_shared/security';
 import { withRequestLogging } from '../../../_shared/logger';
 
 const MAX_LOCATION_BATCH = 200;
-const MAX_AI_BATCH = 5;
+const MAX_AI_BATCH = 1;
 
 export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/images/batch', async ({ request, env }, logger) => {
   const originError = requireSameOrigin(request);
@@ -34,29 +34,52 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
     }
 
     const updated: ImageRow[] = [];
+    const failed: string[] = [];
     for (const key of keys) {
       const row = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key = ?`).bind(key).first<ImageRow>();
-      if (!row) continue;
+      if (!row) {
+        failed.push(key);
+        continue;
+      }
+
+      await env.DB.prepare("UPDATE images SET ai_status='pending', updated_at=datetime('now') WHERE key=?").bind(key).run();
       const object = await env.BUCKET.get(key);
       if (!object) {
+        failed.push(key);
         await env.DB.prepare("UPDATE images SET ai_status='failed', updated_at=datetime('now') WHERE key=?").bind(key).run();
         continue;
       }
+
       try {
         const headers = new Headers();
         object.writeHttpMetadata(headers);
         const mime = headers.get('content-type') || (row.format === 'webp' ? 'image/webp' : `image/${row.format}`);
-        const result = await analyzeImageWithAi({ env, image: new File([await object.arrayBuffer()], row.original_filename || key, { type: mime }) });
+        const result = await analyzeImageWithAi({
+          env,
+          image: new File([await object.arrayBuffer()], row.original_filename || key, { type: mime }),
+        });
         await env.DB.prepare("UPDATE images SET title=?,caption=?,tags_json=?,search_content=?,dominant_color=?,color_palette_json=?,composition=?,ai_status='done',updated_at=datetime('now') WHERE key=?")
-          .bind(result.title, result.caption || null, result.tags.length ? JSON.stringify(result.tags) : null, result.search_content || null, result.dominant_color || null, result.palette.length ? JSON.stringify(result.palette) : null, result.composition || null, key).run();
+          .bind(
+            result.title,
+            result.caption || null,
+            result.tags.length ? JSON.stringify(result.tags) : null,
+            result.search_content || null,
+            result.dominant_color || null,
+            result.palette.length ? JSON.stringify(result.palette) : null,
+            result.composition || null,
+            key,
+          )
+          .run();
+        const fresh = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key = ?`).bind(key).first<ImageRow>();
+        if (fresh) updated.push(fresh);
+        else failed.push(key);
       } catch (error) {
         logger.error('Batch AI analysis failed', { error, context: { key } });
+        failed.push(key);
         await env.DB.prepare("UPDATE images SET ai_status='failed', updated_at=datetime('now') WHERE key=?").bind(key).run();
       }
-      const fresh = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key = ?`).bind(key).first<ImageRow>();
-      if (fresh) updated.push(fresh);
     }
-    return json({ ok: true, action, processed: updated.length, items: updated.map(rowToAdminRecord) });
+    return json({ ok: true, action, processed: updated.length, failed, items: updated.map(rowToAdminRecord) });
   } catch (error) {
     logger.error('POST /api/admin/images/batch failed', { error, context: { action, keyCount: keys.length } });
     return serverError('images_batch_failed');
