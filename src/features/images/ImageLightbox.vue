@@ -121,10 +121,10 @@ const resetOriginalState = () => {
   revokeOriginalObjectUrl();
 };
 
-const displayImageUrl = computed(() => originalObjectUrl.value || image.value?.public_url || '');
+const displayImageUrl = computed(() => originalObjectUrl.value || imageRef.value?.public_url || '');
 
 const loadOriginal = async () => {
-  if (!image.value || originalLoading.value || originalLoaded.value) return;
+  if (!imageRef.value || originalLoading.value || originalLoaded.value) return;
   const requestId = ++originalRequestId;
   originalAbortController?.abort();
   const controller = new AbortController();
