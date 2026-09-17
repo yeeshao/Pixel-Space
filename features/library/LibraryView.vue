@@ -96,6 +96,11 @@ const showAdjacentImage = (offset: -1 | 1) => {
 const showPreviousImage = () => showAdjacentImage(-1);
 const showNextImage = () => showAdjacentImage(1);
 
+const applyBatchLocation = async (payload: Parameters<typeof handleBatchLocation>[0]) => {
+  await handleBatchLocation(payload);
+  batchLocationOpen.value = false;
+};
+
 const replaceImage = (img: ImageRecord) => {
   images.value = images.value.map((item) => (item.key === img.key ? img : item));
   lightboxImage.value = img;
@@ -176,7 +181,7 @@ onMounted(refreshAll);
       :open="batchLocationOpen"
       :selected-count="selectedKeys.size"
       @close="batchLocationOpen = false"
-      @save="async (payload) => { await handleBatchLocation(payload); batchLocationOpen = false; }"
+      @save="applyBatchLocation"
     />
     <ImageLightbox
       :open="lightboxOpen"
