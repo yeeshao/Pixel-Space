@@ -3,10 +3,12 @@ const JSON_HEADERS = {
   'cache-control': 'no-store',
 };
 
-export function json(data: unknown, status = 200): Response {
+export function json(data: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
+  const headers = new Headers(JSON_HEADERS);
+  for (const [key, value] of Object.entries(extraHeaders ?? {})) headers.set(key, value);
   return new Response(JSON.stringify(data), {
     status,
-    headers: JSON_HEADERS,
+    headers,
   });
 }
 

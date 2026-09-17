@@ -4,6 +4,13 @@ export interface AdminIdentity {
   email: string;
 }
 
+const SESSION_COOKIE = '__Host-pixel_admin_session';
+const LOCAL_SESSION_COOKIE = 'pixel_admin_session';
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const PBKDF2_ITERATIONS = 310_000;
+const PASSWORD_HASH_PREFIX = 'pbkdf2_sha256$';
+
+
 const DEV_ADMIN_EMAIL = 'dev@local';
 
 // 身份判定的唯一信号是请求 hostname：
@@ -124,13 +131,182 @@ const verifyAccessJwt = async (jwt: string, env: Env): Promise<AdminIdentity | n
   }
 };
 
+const getCookie = (request: Request, name: string): string | null => {
+  const cookieHeader = request.headers.get('Cookie') ?? '';
+  for (const part of cookieHeader.split(';')) {
+    const [key, ...value] = part.trim().split('=');
+    if (key === name) return value.join('=') || null;
+  }
+  return null;
+};
+
+const bytesToBase64Url = (bytes: Uint8Array): string => {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+};
+
+const base64UrlToBase64 = (value: string): string =>
+  value.replaceAll('-', '+').replaceAll('_', '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
+
+const timingSafeEqual = (a: Uint8Array, b: Uint8Array): boolean => {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a[i] ^ b[i];
+  return diff === 0;
+};
+
+const hashSessionToken = async (token: string): Promise<string> => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+  return bytesToBase64Url(new Uint8Array(digest));
+};
+
+const verifyPassword = (password: string, expected: string): boolean => {
+  // 按用户要求：ADMIN_PASSWORD_HASH 直接保存/比较登录密码。
+  // 注意：这是明文密码存储方案，仅适合个人/私有部署，不推荐公网高安全场景。
+  return password.length > 0 && expected.length > 0 && password === expected;
+};
+
+export const verifyAdminCredentials = async (
+  username: string,
+  password: string,
+  env: Env,
+): Promise<AdminIdentity | null> => {
+  let expectedUsername = env.ADMIN_USERNAME?.trim() ?? '';
+  let expectedPassword = env.ADMIN_PASSWORD_HASH ?? '';
+
+  // D1 中存在管理员配置时，以后台修改后的配置为准。
+  try {
+    const row = await env.DB.prepare(
+      `SELECT username, password FROM admin_credentials WHERE id = 1 LIMIT 1`,
+    ).first<{ username: string; password: string }>();
+    if (row?.username && row.password) {
+      expectedUsername = row.username;
+      expectedPassword = row.password;
+    }
+  } catch {
+    // 兼容尚未执行管理员配置迁移的旧数据库，回退到环境变量。
+  }
+
+  if (!expectedUsername || !expectedPassword || !username.trim() || !password) return null;
+
+  const usernameBytes = new TextEncoder().encode(username.trim());
+  const expectedBytes = new TextEncoder().encode(expectedUsername);
+  if (!timingSafeEqual(usernameBytes, expectedBytes)) return null;
+  if (!verifyPassword(password, expectedPassword)) return null;
+
+  return { email: expectedUsername };
+};
+
+export const updateAdminCredentials = async (
+  currentUsername: string,
+  currentPassword: string,
+  newUsername: string,
+  newPassword: string,
+  env: Env,
+): Promise<boolean> => {
+  const current = await verifyAdminCredentials(currentUsername, currentPassword, env);
+  if (!current || !newUsername.trim() || !newPassword) return false;
+
+  await env.DB.prepare(
+    `INSERT INTO admin_credentials (id, username, password, updated_at)
+     VALUES (1, ?, ?, datetime('now'))
+     ON CONFLICT(id) DO UPDATE SET
+       username = excluded.username,
+       password = excluded.password,
+       updated_at = excluded.updated_at`,
+  ).bind(newUsername.trim(), newPassword).run();
+
+  // 修改密码/账号后让全部旧 Session 失效。
+  await env.DB.prepare(`DELETE FROM admin_sessions`).run();
+  return true;
+};
+
+export const createAdminSession = async (
+  identity: AdminIdentity,
+  request: Request,
+  env: Env,
+): Promise<string> => {
+  const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
+  const token = bytesToBase64Url(tokenBytes);
+  const tokenHash = await hashSessionToken(token);
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = new Date((now + SESSION_TTL_SECONDS) * 1000).toISOString();
+
+  await env.DB.prepare(
+    `INSERT INTO admin_sessions (token_hash, email, expires_at, created_at)
+     VALUES (?, ?, ?, datetime('now'))`,
+  ).bind(tokenHash, identity.email, expiresAt).run();
+
+  // 每次登录顺便清理过期 session，避免表无限增长。
+  await env.DB.prepare(`DELETE FROM admin_sessions WHERE expires_at <= ?`)
+    .bind(new Date(now * 1000).toISOString())
+    .run();
+
+  return token;
+};
+
+export const resolvePasswordSession = async (
+  request: Request,
+  env: Env,
+): Promise<AdminIdentity | null> => {
+  const hostname = new URL(request.url).hostname;
+  const cookieName = LOCAL_HOSTS.has(hostname) ? LOCAL_SESSION_COOKIE : SESSION_COOKIE;
+  const token = getCookie(request, cookieName);
+  if (!token || token.length > 256) return null;
+
+  const tokenHash = await hashSessionToken(token);
+  const now = new Date().toISOString();
+  const row = await env.DB.prepare(
+    `SELECT email FROM admin_sessions WHERE token_hash = ? AND expires_at > ? LIMIT 1`,
+  ).bind(tokenHash, now).first<{ email: string }>();
+
+  return row?.email ? { email: row.email } : null;
+};
+
+export const deleteAdminSession = async (request: Request, env: Env): Promise<void> => {
+  const hostname = new URL(request.url).hostname;
+  const cookieName = LOCAL_HOSTS.has(hostname) ? LOCAL_SESSION_COOKIE : SESSION_COOKIE;
+  const token = getCookie(request, cookieName);
+  if (!token) return;
+  const tokenHash = await hashSessionToken(token);
+  await env.DB.prepare(`DELETE FROM admin_sessions WHERE token_hash = ?`).bind(tokenHash).run();
+};
+
+export const adminSessionCookie = (request: Request, token: string): string => {
+  const hostname = new URL(request.url).hostname;
+  const local = LOCAL_HOSTS.has(hostname);
+  const name = local ? LOCAL_SESSION_COOKIE : SESSION_COOKIE;
+  const secure = local ? '' : ' Secure;';
+  return `${name}=${token}; Path=/;${secure} HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}`;
+};
+
+export const clearAdminSessionCookie = (request: Request): string => {
+  const hostname = new URL(request.url).hostname;
+  const local = LOCAL_HOSTS.has(hostname);
+  const name = local ? LOCAL_SESSION_COOKIE : SESSION_COOKIE;
+  const secure = local ? '' : ' Secure;';
+  return `${name}=; Path=/;${secure} HttpOnly; SameSite=Strict; Max-Age=0`;
+};
+
 export const resolveAdmin = async (request: Request, env: Env): Promise<AdminIdentity | null> => {
   const hostname = new URL(request.url).hostname;
   const isLocal = LOCAL_HOSTS.has(hostname);
+
+  // 线上优先使用账号密码 Session。
   if (!isLocal) {
+    const sessionAdmin = await resolvePasswordSession(request, env);
+    if (sessionAdmin) return sessionAdmin;
+
+    // 兼容旧的 Cloudflare Access：如果暂时没有登录 Session，仍可使用已有 Access 配置。
     const jwt = request.headers.get('Cf-Access-Jwt-Assertion')?.trim() ?? '';
     return jwt ? await verifyAccessJwt(jwt, env) : null;
   }
+
+  // 本地开发保留原有角色切换能力。
+  const sessionAdmin = await resolvePasswordSession(request, env);
+  if (sessionAdmin) return sessionAdmin;
+
   const headerRole = request.headers.get('X-Dev-Role')?.trim().toLowerCase();
   const envRole = env.LOCAL_ROLE?.trim().toLowerCase();
   const role = headerRole || envRole || 'admin';
