@@ -114,24 +114,18 @@ onMounted(refreshAll);
   <AppShell fluid>
     <section class="library-page">
       <LibraryHeader
-        :ai-settings-form="aiSettingsForm"
-        :ai-settings-saving="aiSettingsSaving"
         :breadcrumb="breadcrumb"
         :current-folder="currentFolder"
         :current-folder-id="currentFolderId"
-        :current-virtual="currentVirtual"
         :virtual-counts="virtualCounts"
         @enter-folder="enterFolder"
         @create-folder="handleCreateFolder"
         @rename-current="handleRenameCurrent"
         @delete-current="handleDeleteCurrent"
         @refresh="refreshAll"
-        @save-ai-settings="saveAiSettings"
       />
 
       <p v-if="actionMessage" class="action-toast">{{ actionMessage }}</p>
-
-      <TelegramInboxPanel @processed="refreshAll" />
 
       <LoadingState v-if="loading" title="正在加载控制台" message="同步文件夹、图片和授权信息" />
       <LoadingState v-else-if="loadError" title="控制台加载失败" :error="loadError" />
@@ -156,7 +150,26 @@ onMounted(refreshAll);
         @toggle-selection="toggleSelection"
         @drag-select="selectKey"
         @open-lightbox="openLightbox"
+        @toggle-folder-visibility="handleToggleFolderVisibility"
       />
+
+      <TelegramInboxPanel @processed="refreshAll" />
+
+      <section class="ai-settings-panel library-ai-panel" aria-labelledby="ai-settings-title">
+        <form class="ai-settings-form" @submit.prevent="saveAiSettings">
+          <div class="ai-settings-heading">
+            <h2 id="ai-settings-title">AI 配置</h2>
+            <button type="submit" class="library-btn primary" :disabled="aiSettingsSaving">
+              {{ aiSettingsSaving ? '保存中…' : '保存' }}
+            </button>
+          </div>
+          <div class="settings-grid">
+            <label class="settings-field"><span>Proxy URL</span><input v-model="aiSettingsForm.proxy_url" class="settings-input" type="url" autocomplete="off" placeholder="https://example.test/v1/chat/completions" /></label>
+            <label class="settings-field"><span>Model</span><input v-model="aiSettingsForm.model" class="settings-input" type="text" autocomplete="off" placeholder="gpt-4.1-mini" /></label>
+          </div>
+          <label class="settings-field settings-prompt-field"><span>Prompt</span><textarea v-model="aiSettingsForm.prompt" class="settings-input settings-textarea" autocomplete="off" spellcheck="false" placeholder="编辑图片分析系统提示词" /></label>
+        </form>
+      </section>
 
       <LibraryMoveBar
         v-model:move-target="moveTarget"

@@ -9,6 +9,7 @@ import { requireSameOrigin } from '../../../_shared/security';
 interface CreatePayload {
   name: string;
   parent_id: string | null;
+  is_public: 0 | 1;
 }
 
 const parseCreatePayload = async (request: Request): Promise<CreatePayload | null> => {
@@ -18,7 +19,8 @@ const parseCreatePayload = async (request: Request): Promise<CreatePayload | nul
   if (!name) return null;
   const parentId = normalizeParentId(raw.parent_id);
   if (parentId === undefined) return null;
-  return { name, parent_id: parentId };
+  const isPublic = raw.is_public === undefined ? 1 : (raw.is_public === 0 ? 0 : 1);
+  return { name, parent_id: parentId, is_public: isPublic };
 };
 
 const cryptoUUID = (): string => {
@@ -48,8 +50,8 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
   const id = cryptoUUID();
   try {
     await env.DB
-      .prepare('INSERT INTO folders (id, parent_id, name) VALUES (?, ?, ?)')
-      .bind(id, payload.parent_id, payload.name)
+      .prepare('INSERT INTO folders (id, parent_id, name, is_public) VALUES (?, ?, ?, ?)')
+      .bind(id, payload.parent_id, payload.name, payload.is_public)
       .run();
   } catch (error) {
     const message = (error as Error).message ?? '';
@@ -69,6 +71,7 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
     id,
     parent_id: payload.parent_id,
     name: payload.name,
+    is_public: payload.is_public,
     image_count: 0,
     child_count: 0,
   }, 201);

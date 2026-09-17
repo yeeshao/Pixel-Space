@@ -206,6 +206,17 @@ export const useLibraryActions = ({
     }
   };
 
+  const handleToggleFolderVisibility = async (folder: FolderRecord) => {
+    const next: 0 | 1 = folder.is_public === 0 ? 1 : 0;
+    try {
+      const updated = await updateFolder(folder.id, { is_public: next });
+      folders.value = folders.value.map((item) => (item.id === folder.id ? { ...item, ...updated } : item));
+      actionMessage.value = next === 1 ? `文件夹「${folder.name}」已设为公开` : `文件夹「${folder.name}」已设为私有`;
+    } catch (error) {
+      actionMessage.value = `文件夹权限修改失败：${(error as Error).message}`;
+    }
+  };
+
   const handleRenameCurrent = async () => {
     const folder = currentFolder.value;
     if (!folder) return;
@@ -402,6 +413,7 @@ export const useLibraryActions = ({
     handleDeleteDownloadGrant,
     handleCreateFolder,
     handleRenameCurrent,
+    handleToggleFolderVisibility,
     handleDeleteCurrent,
     handleMove,
     handleBatchDelete,

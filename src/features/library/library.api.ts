@@ -9,6 +9,7 @@ export interface FolderRecord {
   name: string;
   created_at: string;
   updated_at: string;
+  is_public: number;
   image_count: number;
   child_count: number;
 }
@@ -90,7 +91,7 @@ export function updateAiSettings(payload: AiSettings): Promise<AiSettings> {
   });
 }
 
-export function createFolder(payload: { name: string; parent_id: string | null }): Promise<FolderRecord> {
+export function createFolder(payload: { name: string; parent_id: string | null; is_public?: 0 | 1 }): Promise<FolderRecord> {
   return jsonFetch<FolderRecord>('/api/admin/folders', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -100,7 +101,7 @@ export function createFolder(payload: { name: string; parent_id: string | null }
 
 export function updateFolder(
   id: string,
-  payload: { name?: string; parent_id?: string | null },
+  payload: { name?: string; parent_id?: string | null; is_public?: 0 | 1 },
 ): Promise<FolderRecord> {
   return jsonFetch<FolderRecord>(`/api/admin/folders/${encodeURIComponent(id)}`, {
     method: 'PATCH',

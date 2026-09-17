@@ -2,9 +2,11 @@ import type { Env } from '../../types';
 import { notFound, serverError } from '../../_shared/http';
 import { keyFromRouteParam } from '../../_shared/keys';
 import { withRequestLogging } from '../../_shared/logger';
+import { isFolderPublic } from '../../_shared/folders';
 
 interface VisibilityRow {
   is_public: number;
+  folder_id: string | null;
 }
 
 const PUBLIC_OBJECT_CACHE_CONTROL = 'public, max-age=31536000, immutable';
@@ -17,10 +19,10 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/public/
   if (!key) return notFound();
 
   try {
-    const row = await env.DB.prepare('SELECT is_public FROM images WHERE key = ?').bind(key).first<VisibilityRow>();
+    const row = await env.DB.prepare('SELECT is_public, folder_id FROM images WHERE key = ?').bind(key).first<VisibilityRow>();
     if (!row) return notFound();
 
-    if (row.is_public !== 1) return notFound();
+    if (row.is_public !== 1 || !(await isFolderPublic(env.DB, row.folder_id))) return notFound();
 
     const cache = edgeCache();
     const cacheKey = new Request(request.url, { method: 'GET' });

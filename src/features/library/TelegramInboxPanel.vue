@@ -51,18 +51,19 @@ const readDimensions = (file: File): Promise<{ width: number; height: number }> 
   image.src = url;
 });
 
-const mimeFromFormat = (format: string, filename: string): string => {
-  const ext = (filename.split('.').pop() || format || 'jpg').toLowerCase();
-  if (ext === 'png') return 'image/png';
-  if (ext === 'webp') return 'image/webp';
-  if (ext === 'gif') return 'image/gif';
-  if (ext === 'avif') return 'image/avif';
-  return 'image/jpeg';
+const inferImageMime = (name: string, blobType: string): string => {
+  if (blobType.startsWith('image/')) return blobType;
+  const ext = name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? '';
+  const byExt: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+    gif: 'image/gif', avif: 'image/avif', bmp: 'image/bmp', heic: 'image/heic', heif: 'image/heif',
+  };
+  return byExt[ext] ?? 'image/jpeg';
 };
 
 const discardOne = async (item: ImageRecord) => {
   if (processingKey.value) return;
-  if (!window.confirm(`确定不入库这张图片？\n\n“${item.title || item.original_filename}”将从 Pixel-Space 待处理区移除，但不会删除 Telegram 频道中的原消息。`)) return;
+  if (!window.confirm(`确定不入库「${item.title || item.original_filename}」？仅从 Pixel Space 暂存区移除，不删除 Telegram 频道原图。`)) return;
   processingKey.value = item.key;
   error.value = null;
   try {
@@ -84,13 +85,8 @@ const processOne = async (item: ImageRecord) => {
     const response = await fetch(item.public_url, { credentials: 'same-origin' });
     if (!response.ok) throw new Error(`读取 Telegram 原图失败：HTTP ${response.status}`);
     const blob = await response.blob();
-    const filename = item.original_filename || `${item.key}.${item.format || 'jpg'}`;
-    // Telegram 的文件代理有时会返回 application/octet-stream；browser-image-compression
-    // 会因此把真实图片误判为“不是图片”。优先使用响应 MIME，非 image/* 时按文件格式纠正。
-    const responseMime = blob.type?.toLowerCase() || '';
-    const mime = responseMime.startsWith('image/') ? responseMime : mimeFromFormat(item.format, filename);
-    const original = new File([blob], filename, { type: mime, lastModified: Date.now() });
-    if (!original.type.startsWith('image/')) throw new Error(`Telegram 原图类型无法识别：${mime}`);
+    const originalName = item.original_filename || `${item.key}.jpg`;
+    const original = new File([blob], originalName, { type: inferImageMime(originalName, blob.type) });
     const hash = await sha256HexFromFile(original);
     const exif = await readExif(original);
     const compressedBlob = await imageCompression(original, {
@@ -200,9 +196,7 @@ onUnmounted(() => {
             <button type="button" class="library-btn small primary" :disabled="!!processingKey" @click="processOne(item)">
               {{ processingKey === item.key ? '处理中…' : '处理并入库' }}
             </button>
-            <button type="button" class="library-btn small danger" :disabled="!!processingKey" @click="discardOne(item)">
-              不入库
-            </button>
+            <button type="button" class="library-btn small danger" :disabled="!!processingKey" @click="discardOne(item)">不入库</button>
           </div>
         </div>
       </article>
@@ -222,8 +216,22 @@ onUnmounted(() => {
 .telegram-inbox-card > img { display:block; width:100%; aspect-ratio:1; object-fit:cover; background:rgba(0,0,0,.2); }
 .telegram-inbox-info { display:flex; flex-direction:column; gap:.28rem; padding:.6rem; }
 .telegram-inbox-info strong { overflow:hidden; color:rgb(226,232,240); font-size:.76rem; text-overflow:ellipsis; white-space:nowrap; }
-.telegram-inbox-info span { color:rgba(148,163,184,.85); font-size:.68rem; }\n.telegram-inbox-card-actions { display:flex; gap:.4rem; }\n.telegram-inbox-card-actions .library-btn { flex:1; }
+.telegram-inbox-info span { color:rgba(148,163,184,.85); font-size:.68rem; }
 .telegram-inbox-error { margin:0; color:rgb(251,113,133); font-size:.75rem; }
 .telegram-inbox-empty { margin:0; padding:.8rem; color:rgba(148,163,184,.78); font-size:.75rem; text-align:center; }
 @media (max-width:640px) { .telegram-inbox-header { align-items:flex-start; flex-direction:column; } }
+.telegram-inbox-card-actions { display:grid; grid-template-columns:minmax(0,1fr) minmax(5.2rem,.55fr); gap:.45rem; margin-top:.2rem; }
+.telegram-inbox-card-actions .library-btn { width:100%; min-width:0; }
+@media (max-width:720px) {
+  .telegram-inbox { padding:.8rem; }
+  .telegram-inbox-header { align-items:stretch; flex-direction:column; gap:.65rem; }
+  .telegram-inbox-actions { width:100%; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:.45rem; }
+  .telegram-inbox-actions .library-btn { width:100%; }
+  .telegram-inbox-grid { grid-template-columns:1fr; gap:.6rem; }
+  .telegram-inbox-card { display:grid; grid-template-columns:5.6rem minmax(0,1fr); align-items:stretch; }
+  .telegram-inbox-card > img { width:5.6rem; height:100%; min-height:7rem; aspect-ratio:auto; }
+  .telegram-inbox-info { min-width:0; padding:.55rem .6rem; justify-content:center; }
+  .telegram-inbox-info strong { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .telegram-inbox-card-actions { grid-template-columns:minmax(0,1fr) minmax(4.4rem,.6fr); }
+}
 </style>

@@ -8,6 +8,7 @@ CREATE TABLE folders (
   name       TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  is_public  INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (parent_id) REFERENCES folders(id)
 );
 

@@ -4,6 +4,7 @@ export interface FolderRow {
   name: string;
   created_at: string;
   updated_at: string;
+  is_public: number;
 }
 
 export interface FolderRecord extends FolderRow {
@@ -20,6 +21,7 @@ SELECT
   f.name,
   f.created_at,
   f.updated_at,
+  f.is_public,
   COALESCE(image_counts.image_count, 0) AS image_count,
   COALESCE(child_counts.child_count, 0) AS child_count
 FROM folders f
@@ -43,33 +45,38 @@ ORDER BY f.parent_id, f.name COLLATE NOCASE
 export const LIST_PUBLIC_FOLDERS_SQL = `
 WITH RECURSIVE
 public_image_folders(id) AS (
-  SELECT DISTINCT folder_id AS id
-  FROM images
-  WHERE folder_id IS NOT NULL
-    AND is_public = 1
+  SELECT DISTINCT i.folder_id AS id
+  FROM images i
+  WHERE i.folder_id IS NOT NULL
+    AND i.is_public = 1
 ),
 visible_folders(id) AS (
-  SELECT id
-  FROM public_image_folders
-  UNION
-  SELECT f.parent_id
+  SELECT f.id
   FROM folders f
-  JOIN visible_folders vf ON vf.id = f.id
-  WHERE f.parent_id IS NOT NULL
+  JOIN public_image_folders pif ON pif.id = f.id
+  WHERE f.is_public = 1
+  UNION
+  SELECT parent.id
+  FROM folders parent
+  JOIN (SELECT id, parent_id FROM folders WHERE is_public = 1) child ON child.parent_id = parent.id
+  JOIN visible_folders vf ON vf.id = child.id
+  WHERE parent.is_public = 1
 ),
 image_counts AS (
-  SELECT folder_id, COUNT(*) AS image_count
-  FROM images
-  WHERE folder_id IS NOT NULL
-    AND is_public = 1
-  GROUP BY folder_id
+  SELECT i.folder_id, COUNT(*) AS image_count
+  FROM images i
+  WHERE i.folder_id IS NOT NULL
+    AND i.is_public = 1
+    AND i.folder_id IN (SELECT id FROM visible_folders)
+  GROUP BY i.folder_id
 ),
 child_counts AS (
-  SELECT parent_id, COUNT(*) AS child_count
-  FROM folders
-  WHERE parent_id IS NOT NULL
-    AND id IN (SELECT id FROM visible_folders)
-  GROUP BY parent_id
+  SELECT f.parent_id, COUNT(*) AS child_count
+  FROM folders f
+  WHERE f.parent_id IS NOT NULL
+    AND f.is_public = 1
+    AND f.id IN (SELECT id FROM visible_folders)
+  GROUP BY f.parent_id
 )
 SELECT
   f.id,
@@ -77,6 +84,7 @@ SELECT
   f.name,
   f.created_at,
   f.updated_at,
+  f.is_public,
   COALESCE(image_counts.image_count, 0) AS image_count,
   COALESCE(child_counts.child_count, 0) AS child_count
 FROM folders f
@@ -106,6 +114,21 @@ export const normalizeParentId = (value: unknown): string | null | undefined => 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 };
+
+export async function isFolderPublic(db: D1Database, folderId: string | null): Promise<boolean> {
+  if (!folderId) return true;
+  const row = await db.prepare(`
+    WITH RECURSIVE ancestors(id, parent_id, is_public) AS (
+      SELECT id, parent_id, is_public FROM folders WHERE id = ?
+      UNION ALL
+      SELECT f.id, f.parent_id, f.is_public
+      FROM folders f
+      JOIN ancestors a ON f.id = a.parent_id
+    )
+    SELECT 1 AS ok FROM ancestors WHERE is_public != 1 LIMIT 1
+  `).bind(folderId).first<{ ok: number }>();
+  return !row;
+}
 
 // 给一个文件夹 id，返回它的全部后代 id（含自身）。用于校验「不能把目录移到自己子树里」。
 export async function collectDescendantIds(db: D1Database, rootId: string): Promise<Set<string>> {

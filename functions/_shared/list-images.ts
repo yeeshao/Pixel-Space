@@ -119,7 +119,20 @@ export const handleListImages = async (
     const conditions: string[] = ["(tg_status IS NULL OR tg_status != 'staged')"];
     const binds: unknown[] = [];
 
-    if (!options.admin) conditions.push('is_public = 1');
+    if (!options.admin) {
+      conditions.push('is_public = 1');
+      conditions.push(`(
+        folder_id IS NULL OR NOT EXISTS (
+          WITH RECURSIVE ancestors(id, parent_id, is_public) AS (
+            SELECT id, parent_id, is_public FROM folders WHERE id = images.folder_id
+            UNION ALL
+            SELECT f.id, f.parent_id, f.is_public
+            FROM folders f JOIN ancestors a ON f.id = a.parent_id
+          )
+          SELECT 1 FROM ancestors WHERE is_public != 1 LIMIT 1
+        )
+      )`);
+    }
 
     if (search) {
       const likeBinds = Array(7).fill(`%${search}%`);

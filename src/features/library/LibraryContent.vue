@@ -30,6 +30,7 @@ const emit = defineEmits<{
   toggleSelection: [key: string];
   dragSelect: [key: string];
   updateGrant: [id: string, expiresAt: string];
+  toggleFolderVisibility: [folder: FolderRecord];
 }>();
 
 const {
@@ -79,10 +80,19 @@ const handleTileClick = (img: ImageRecord) => {
           </svg>
         </div>
         <div class="folder-body">
-          <p class="folder-name">{{ folder.name }}</p>
-          <p class="folder-meta">
-            {{ folder.image_count }} 张图片 · {{ folder.child_count }} 个子目录
-          </p>
+          <div class="folder-name-row">
+            <p class="folder-name">{{ folder.name }}</p>
+            <button
+              type="button"
+              class="folder-visibility"
+              :class="{ 'is-public': folder.is_public !== 0 }"
+              :title="folder.is_public !== 0 ? '点击设为私有' : '点击设为公开'"
+              @click.stop="emit('toggleFolderVisibility', folder)"
+            >
+              {{ folder.is_public !== 0 ? '公开' : '私有' }}
+            </button>
+          </div>
+          <p class="folder-meta">{{ folder.image_count }} 张图片 · {{ folder.child_count }} 个子目录</p>
         </div>
       </article>
     </section>
