@@ -11,6 +11,7 @@ export function listTelegramInbox(): Promise<ImageRecord[]> {
 
 export interface TelegramProcessPayload {
   compressed: File;
+  hash: string;
   dimensions: { width: number; height: number };
   exif: UploadExif;
   meta: {
@@ -45,6 +46,7 @@ export interface TelegramProcessPayload {
 export async function processTelegramImage(key: string, payload: TelegramProcessPayload): Promise<ImageRecord> {
   const formData = new FormData();
   formData.append('compressed', payload.compressed, payload.compressed.name);
+  formData.append('hash', payload.hash);
   formData.append('dimensions', JSON.stringify(payload.dimensions));
   formData.append('exif', JSON.stringify(payload.exif));
   formData.append('meta', JSON.stringify(payload.meta));

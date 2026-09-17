@@ -43,6 +43,9 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
   try { formData = await request.formData(); } catch { return badRequest('invalid_form_data'); }
 
   const compressed = fileFromForm(formData, 'compressed');
+  const hashValue = formData.get('hash');
+  const hash = typeof hashValue === 'string' ? hashValue.trim().toLowerCase() : '';
+  if (!/^[0-9a-f]{64}$/.test(hash)) return badRequest('invalid_hash');
   if (!compressed || compressed.type !== 'image/webp') return badRequest('invalid_compressed_mime');
   if (compressed.size > MAX_COMPRESSED_BYTES) return badRequest('compressed_too_large');
 
@@ -69,6 +72,14 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
     const row = await env.DB.prepare(`SELECT * FROM images WHERE key = ?`).bind(key).first<TelegramStagedImageRow>();
     if (!row) return notFound();
     if (row.tg_status !== 'staged') return badRequest('telegram_image_not_staged');
+
+    // 原图仍在 Telegram；hash 在浏览器读取 Telegram 原图后计算。
+    // 如果已经存在相同原图，则直接结束当前暂存记录，不重复入库。
+    const existing = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE hash = ? AND tg_status != 'staged' LIMIT 1`).bind(hash).first<ImageRow>();
+    if (existing) {
+      await env.DB.prepare('DELETE FROM images WHERE key = ?').bind(key).run();
+      return json(rowToAdminRecord(existing), 200);
+    }
 
     const newKey = createImageKey();
     await env.BUCKET.put(newKey, compressed, { httpMetadata: { contentType: 'image/webp' } });
@@ -102,7 +113,7 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
         height,
         'webp',
         compressed.size,
-        row.hash,
+        hash,
         stringOrNull(meta.location_name),
         lat,
         lng,
