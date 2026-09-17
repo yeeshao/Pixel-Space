@@ -96,9 +96,17 @@ const showAdjacentImage = (offset: -1 | 1) => {
 const showPreviousImage = () => showAdjacentImage(-1);
 const showNextImage = () => showAdjacentImage(1);
 
+const openBatchLocation = () => {
+  batchLocationOpen.value = true;
+};
+
 const applyBatchLocation = async (payload: Parameters<typeof handleBatchLocation>[0]) => {
   await handleBatchLocation(payload);
   batchLocationOpen.value = false;
+};
+
+const runBatchAi = () => {
+  void handleBatchAi();
 };
 
 const replaceImage = (img: ImageRecord) => {
@@ -170,8 +178,8 @@ onMounted(refreshAll);
         :selected-count="selectedKeys.size"
         @open-grant="grantDialogOpen = true"
         @move="handleMove"
-        @batch-location="batchLocationOpen = true"
-        @batch-ai="handleBatchAi"
+        @batch-location="openBatchLocation"
+        @batch-ai="runBatchAi"
         @delete="handleBatchDelete"
         @cancel="clearSelection"
       />

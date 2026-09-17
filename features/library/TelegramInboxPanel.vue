@@ -7,7 +7,7 @@ import { buildUploadFormData } from '@/features/upload/upload-form';
 import { uploadImage } from '@/features/upload/upload.api';
 import { fetchTelegramInboxOriginal, listTelegramInbox, type TelegramInboxItem } from './telegram-inbox.api';
 import type { UploadExif, UploadMeta } from '@/features/upload/upload.types';
-import type { MapRegion } from '@/features/upload/map-coordinate';
+import type { LocationRegion } from '@/shared/geo-region';
 
 const MAX_EDGE = 2048;
 const items = ref<TelegramInboxItem[]>([]);
@@ -28,7 +28,13 @@ const readExif = async (file: File): Promise<UploadExif> => {
   const raw = await exifr.parse(file, tags).catch(() => null) as Record<string, unknown> | null;
   return {
     taken_at: typeof raw?.DateTimeOriginal === 'string' ? raw.DateTimeOriginal : typeof raw?.CreateDate === 'string' ? raw.CreateDate : null,
-    camera: [raw?.Make, raw?.Model].filter((v): v is string => typeof v === 'string' && v.trim().length > 0).join(' ') || null,
+    camera: (() => {
+      const parts: string[] = [];
+      for (const value of [raw?.Make, raw?.Model]) {
+        if (typeof value === 'string' && value.trim().length > 0) parts.push(value.trim());
+      }
+      return parts.join(' ') || null;
+    })(),
     iso: typeof raw?.ISO === 'number' ? raw.ISO : null,
     aperture: typeof raw?.FNumber === 'number' ? raw.FNumber : null,
     shutter: typeof raw?.ExposureTime === 'number' ? String(raw.ExposureTime) : null,
@@ -59,9 +65,9 @@ const refresh = async () => {
   finally { loading.value = false; }
 };
 
-const parseCaptionLocation = (caption: string | null): { lat: number | null; lng: number | null; region: MapRegion | null } => {
+const parseCaptionLocation = (caption: string | null): { lat: number | null; lng: number | null; region: LocationRegion | null } => {
   const match = caption?.match(/@geo\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/i);
-  if (!match) return { lat: null as number | null, lng: null as number | null, region: null as 'china' | 'global' | null };
+  if (!match) return { lat: null as number | null, lng: null as number | null, region: null as LocationRegion | null };
   const lat = Number(match[1]);
   const lng = Number(match[2]);
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
