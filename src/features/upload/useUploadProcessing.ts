@@ -355,6 +355,22 @@ export const useUploadProcessing = ({
     }
   };
 
+  const retryUploadForCurrent = async () => {
+    const entry = currentEntry.value;
+    if (
+      !entry
+      || entry.status !== 'error'
+      || !entry.originalHash
+      || !entry.compressedFile
+      || !entry.compressedDimensions
+      || isBatchUploading.value
+    ) return;
+
+    entry.status = 'ready';
+    entry.errorMessage = null;
+    await uploadEntry(entry);
+  };
+
   const retryArchiveForCurrent = async () => {
     const entry = currentEntry.value;
     if (!entry?.uploadResult || entry.uploadResult.tg_status !== 'failed' || entry.archiveRetrying) return;
@@ -391,6 +407,7 @@ export const useUploadProcessing = ({
     enqueueAi,
     triggerAiForCurrent,
     uploadEntry,
+    retryUploadForCurrent,
     retryArchiveForCurrent,
     submitUploadAll,
   };

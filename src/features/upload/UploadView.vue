@@ -86,6 +86,7 @@ const loadFolders = async () => {
 const {
   enqueueProcess,
   triggerAiForCurrent,
+  retryUploadForCurrent,
   retryArchiveForCurrent,
   submitUploadAll,
 } = useUploadProcessing({
@@ -193,6 +194,7 @@ onBeforeUnmount(() => {
 
           <UploadPreviewStage
             :current-entry="currentEntry"
+            @retry-upload="retryUploadForCurrent"
             @retry-archive="retryArchiveForCurrent"
           />
 

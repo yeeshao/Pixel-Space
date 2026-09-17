@@ -7,6 +7,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
+  retryUpload: [];
   retryArchive: [];
 }>();
 </script>
@@ -41,7 +42,17 @@ const emit = defineEmits<{
             {{ currentEntry.archiveRetrying ? '重试中' : '重试归档' }}
           </button>
         </span>
-        <span v-else-if="currentEntry.status === 'error'" class="preview-error">{{ currentEntry.errorMessage || '处理失败' }}</span>
+        <span v-else-if="currentEntry.status === 'error'" class="preview-error-group">
+          <span class="preview-error">{{ currentEntry.errorMessage || '处理失败' }}</span>
+          <button
+            v-if="currentEntry.originalHash && currentEntry.compressedFile && currentEntry.compressedDimensions"
+            type="button"
+            class="upload-retry-button"
+            @click="emit('retryUpload')"
+          >
+            重试上传
+          </button>
+        </span>
         <span v-else-if="currentEntry.compressedFile" class="preview-ok">已压缩</span>
       </figcaption>
     </template>
