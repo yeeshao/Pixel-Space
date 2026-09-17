@@ -5,21 +5,14 @@ export interface ImageInfo {
   height: number;
 }
 
-const MIME_BY_SIGNATURE: Array<{ mime: string; extension: string }> = [
-  { mime: 'image/jpeg', extension: 'jpg' },
-  { mime: 'image/png', extension: 'png' },
-  { mime: 'image/gif', extension: 'gif' },
-  { mime: 'image/webp', extension: 'webp' },
-];
-
 const u16 = (v: DataView, o: number, le = false) => v.getUint16(o, le);
 const u32 = (v: DataView, o: number, le = false) => v.getUint32(o, le);
 
 const detectMime = (b: Uint8Array): { mime: string; extension: string } | null => {
-  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return MIME_BY_SIGNATURE[0];
-  if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a) return MIME_BY_SIGNATURE[1];
-  if (b.length >= 6 && ((b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 && b[4] === 0x37 && b[5] === 0x61) || (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 && b[4] === 0x39 && b[5] === 0x61))) return MIME_BY_SIGNATURE[2];
-  if (b.length >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return MIME_BY_SIGNATURE[3];
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { mime: 'image/jpeg', extension: 'jpg' };
+  if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a) return { mime: 'image/png', extension: 'png' };
+  if (b.length >= 6 && ((b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 && b[4] === 0x37 && b[5] === 0x61) || (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 && b[4] === 0x39 && b[5] === 0x61))) return { mime: 'image/gif', extension: 'gif' };
+  if (b.length >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return { mime: 'image/webp', extension: 'webp' };
   return null;
 };
 
@@ -63,7 +56,7 @@ const webpDimensions = (b: Uint8Array): [number, number] | null => {
     const start = 26;
     if (b[start] === 0x9d && b[start + 1] === 0x01 && b[start + 2] === 0x2a) return [u16(view, start + 3, true) & 0x3fff, u16(view, start + 5, true) & 0x3fff];
   }
-  if (chunk === 'VP8L' && b.length >= 25 && b[21] === 0x2f) {
+  if (chunk === 'VP8L' && b.length >= 26 && b[21] === 0x2f) {
     const w = 1 + b[22] + ((b[23] & 0x3f) << 8);
     const h = 1 + ((b[23] >> 6) | (b[24] << 2) | ((b[25] & 0x03) << 10));
     return [w, h];
@@ -71,17 +64,19 @@ const webpDimensions = (b: Uint8Array): [number, number] | null => {
   return null;
 };
 
-export const inspectImage = (bytes: ArrayBuffer, declaredMime = ''): ImageInfo => {
+export const inspectImage = (bytes: ArrayBuffer): ImageInfo => {
   const b = new Uint8Array(bytes);
   const detected = detectMime(b);
   if (!detected) throw new Error('telegram_unsupported_image');
-  const mime = detected.mime;
-  const dimensions = mime === 'image/jpeg' ? jpegDimensions(b) : mime === 'image/png' ? pngDimensions(b) : mime === 'image/gif' ? gifDimensions(b) : webpDimensions(b);
+  const dimensions = detected.mime === 'image/jpeg'
+    ? jpegDimensions(b)
+    : detected.mime === 'image/png'
+      ? pngDimensions(b)
+      : detected.mime === 'image/gif'
+        ? gifDimensions(b)
+        : webpDimensions(b);
   if (!dimensions || dimensions[0] <= 0 || dimensions[1] <= 0) throw new Error('telegram_invalid_image_dimensions');
-  if (declaredMime && declaredMime.startsWith('image/') && declaredMime !== mime) {
-    // Telegram occasionally omits an accurate MIME type. The binary signature wins.
-  }
-  return { mime, extension: detected.extension, width: dimensions[0], height: dimensions[1] };
+  return { ...detected, width: dimensions[0], height: dimensions[1] };
 };
 
 export const sha256Hex = async (bytes: ArrayBuffer): Promise<string> => {
@@ -91,5 +86,5 @@ export const sha256Hex = async (bytes: ArrayBuffer): Promise<string> => {
 
 export const filenameForTelegram = (name: string | undefined, key: string, extension: string): string => {
   const cleaned = (name ?? '').trim().replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(0, 180);
-  return cleaned || `${key}.${extension}`;
+  return cleaned || `${key.replace(/^images\//, '')}.${extension}`;
 };

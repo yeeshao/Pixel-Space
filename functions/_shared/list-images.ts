@@ -116,7 +116,7 @@ export const handleListImages = async (
       return json(pagination ? { items: [], nextCursor: null } : []);
     }
 
-    const conditions: string[] = [];
+    const conditions: string[] = ["(tg_status IS NULL OR tg_status != 'staged')"];
     const binds: unknown[] = [];
 
     if (!options.admin) conditions.push('is_public = 1');

@@ -1,33 +1,57 @@
+import type { ImageRecord } from '@/features/images/image.types';
 import { readHttpError } from '@/shared/api/http';
 
-export interface TelegramInboxItem {
-  id: string;
-  original_filename: string;
-  mime: string;
-  width: number;
-  height: number;
-  bytes: number;
-  caption: string | null;
-  status: string;
-  error: string | null;
-  tg_message_id: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export function listTelegramInbox(): Promise<TelegramInboxItem[]> {
-  return fetch('/api/admin/telegram/inbox').then(async (response) => {
-    if (!response.ok) throw new Error(`Telegram 待处理列表加载失败：${await readHttpError(response)}`);
-    const data = (await response.json()) as { items: TelegramInboxItem[] };
-    return data.items ?? [];
+export function listTelegramInbox(): Promise<ImageRecord[]> {
+  return fetch('/api/admin/telegram-inbox').then(async (response) => {
+    if (!response.ok) throw new Error(`Telegram 暂存加载失败：${await readHttpError(response)}`);
+    return (await response.json()) as ImageRecord[];
   });
 }
 
-export async function fetchTelegramInboxOriginal(id: string): Promise<File> {
-  const response = await fetch(`/api/admin/telegram/inbox/${encodeURIComponent(id)}/original`);
-  if (!response.ok) throw new Error(`Telegram 原图读取失败：${await readHttpError(response)}`);
-  const blob = await response.blob();
-  const disposition = response.headers.get('content-disposition') ?? '';
-  const match = disposition.match(/filename="([^"]+)"/i);
-  return new File([blob], match?.[1] ?? `telegram-${id}`, { type: blob.type || 'application/octet-stream' });
+export interface TelegramProcessPayload {
+  compressed: File;
+  dimensions: { width: number; height: number };
+  exif: Record<string, unknown>;
+  meta: {
+    title: string;
+    caption: string;
+    original_filename: string;
+    location_name: string;
+    location_lat: number | null;
+    location_lng: number | null;
+    location_region: string | null;
+    tags: string;
+    search_content: string;
+    dominant_color: string;
+    palette: string;
+    composition: string;
+    is_public: 0 | 1;
+    location_public: 0 | 1;
+  };
+  ai?: {
+    failed: boolean;
+    title: string;
+    caption: string;
+    tags: string[];
+    search_content: string;
+    dominant_color: string;
+    palette: string[];
+    composition: string;
+  };
+}
+
+export async function processTelegramImage(key: string, payload: TelegramProcessPayload): Promise<ImageRecord> {
+  const formData = new FormData();
+  formData.append('compressed', payload.compressed, payload.compressed.name);
+  formData.append('dimensions', JSON.stringify(payload.dimensions));
+  formData.append('exif', JSON.stringify(payload.exif));
+  formData.append('meta', JSON.stringify(payload.meta));
+  if (payload.ai) formData.append('ai', JSON.stringify(payload.ai));
+
+  const response = await fetch(`/api/admin/telegram/process/${encodeURIComponent(key)}`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) throw new Error(`Telegram 图片处理失败：${await readHttpError(response)}`);
+  return (await response.json()) as ImageRecord;
 }
