@@ -12,6 +12,9 @@ export interface ImageRecord {
   height: number;
   format: string;
   bytes_compressed: number;
+  original_bytes: number | null;
+  original_width: number | null;
+  original_height: number | null;
   location_name: string | null;
   location_lat: number | null;
   location_lng: number | null;
@@ -37,7 +40,7 @@ export interface ImageRecord {
 }
 
 export const IMAGE_SELECT_COLUMNS =
-  'key, title, caption, original_filename, width, height, format, bytes_compressed, location_name, location_lat, location_lng, location_region, exif_taken_at, exif_camera, exif_iso, exif_aperture, exif_shutter, exif_focal_length, tags_json, search_content, dominant_color, color_palette_json, composition, ai_status, tg_status, created_at, updated_at, is_public, location_public, folder_id';
+  'key, title, caption, original_filename, width, height, format, bytes_compressed, original_bytes, original_width, original_height, location_name, location_lat, location_lng, location_region, exif_taken_at, exif_camera, exif_iso, exif_aperture, exif_shutter, exif_focal_length, tags_json, search_content, dominant_color, color_palette_json, composition, ai_status, tg_status, created_at, updated_at, is_public, location_public, folder_id';
 
 // D1 表里的原始行形状（只声明 list / detail 接口会用到的列）。
 export interface ImageRow {
@@ -49,6 +52,9 @@ export interface ImageRow {
   height: number;
   format: string;
   bytes_compressed: number;
+  original_bytes: number | null;
+  original_width: number | null;
+  original_height: number | null;
   location_name: string | null;
   location_lat: number | null;
   location_lng: number | null;
@@ -124,6 +130,9 @@ export function rowToRecord(row: ImageRow, publicBaseUrl: string): ImageRecord {
     height: row.height,
     format: row.format,
     bytes_compressed: row.bytes_compressed,
+    original_bytes: row.original_bytes,
+    original_width: row.original_width,
+    original_height: row.original_height,
     location_name: row.location_name,
     location_lat: row.location_lat,
     location_lng: row.location_lng,

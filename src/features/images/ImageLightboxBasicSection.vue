@@ -27,11 +27,22 @@ const emit = defineEmits<{
         <span class="item-value text-truncate">{{ image.original_filename || image.key }}</span>
       </div>
       <div class="detail-item">
-        <span class="item-label">文件大小</span>
+        <span class="item-label">原图大小</span>
+        <span class="item-value">{{ image.original_bytes != null ? formatBytes(image.original_bytes) : '未记录' }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="item-label">原图分辨率</span>
+        <span class="item-value">
+          <span v-if="image.original_width && image.original_height" class="badge">{{ image.original_width }} × {{ image.original_height }}</span>
+          <span v-else class="item-muted">未记录</span>
+        </span>
+      </div>
+      <div class="detail-item">
+        <span class="item-label">预览大小</span>
         <span class="item-value">{{ formatBytes(image.bytes_compressed) }}</span>
       </div>
       <div class="detail-item">
-        <span class="item-label">分辨率</span>
+        <span class="item-label">预览分辨率</span>
         <span class="item-value">
           <span class="badge">{{ image.width }} × {{ image.height }}</span>
         </span>

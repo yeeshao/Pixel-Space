@@ -8,6 +8,9 @@ export interface ImageRecord {
   height: number;
   format: string;
   bytes_compressed: number;
+  original_bytes: number | null;
+  original_width: number | null;
+  original_height: number | null;
   location_name: string | null;
   location_lat: number | null;
   location_lng: number | null;

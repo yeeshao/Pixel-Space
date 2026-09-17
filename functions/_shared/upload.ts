@@ -36,6 +36,9 @@ INSERT INTO images (
   height,
   format,
   bytes_compressed,
+  original_bytes,
+  original_width,
+  original_height,
   hash,
   location_name,
   location_lat,
@@ -57,7 +60,7 @@ INSERT INTO images (
   is_public,
   location_public,
   folder_id
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const SELECT_SQL =
@@ -194,11 +197,12 @@ export const handleUploadPost = async (
   const rawExif = objectFromJsonField(formData, 'exif');
   const rawMeta = objectFromJsonField(formData, 'meta');
   const rawDimensions = objectFromJsonField(formData, 'dimensions');
+  const rawOriginalDimensions = objectFromJsonField(formData, 'original_dimensions');
 
   const telegramInboxIdValue = formData.get('telegram_inbox_id');
   const telegramInboxId = typeof telegramInboxIdValue === 'string' ? telegramInboxIdValue.trim() : '';
 
-  if (!original || !compressed || !hash || !rawExif || !rawMeta || !rawDimensions) {
+  if (!original || !compressed || !hash || !rawExif || !rawMeta || !rawDimensions || !rawOriginalDimensions) {
     return badRequest('missing_upload_fields');
   }
   if (!original.type.startsWith('image/')) return badRequest('invalid_original_mime');
@@ -207,6 +211,7 @@ export const handleUploadPost = async (
 
   const dimensions = normalizeDimensions(rawDimensions);
   if (!dimensions) return badRequest('invalid_dimensions');
+  const originalDimensions = normalizeDimensions(rawOriginalDimensions) ?? dimensions;
 
   const meta = normalizeMeta(rawMeta);
   const exif = normalizeExif(rawExif);
@@ -270,6 +275,9 @@ export const handleUploadPost = async (
         dimensions.height,
         'webp',
         compressed.size,
+        original.size,
+        originalDimensions.width,
+        originalDimensions.height,
         hash,
         meta.location_name,
         meta.location_lat,

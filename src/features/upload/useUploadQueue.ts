@@ -14,6 +14,7 @@ export interface UploadEntry {
   originalHash: string | null;
   compressedFile: File | null;
   compressedDimensions: UploadDimensions | null;
+  originalDimensions: UploadDimensions | null;
   aiPreviewFile: File | null;
   exif: UploadExif;
   meta: UploadMeta;
@@ -76,7 +77,7 @@ export const useUploadQueue = (options: UploadQueueOptions = {}) => {
       originalHash: null,
       compressedFile: null,
       compressedDimensions: null,
-      aiPreviewFile: null,
+      originalDimensions: null,      aiPreviewFile: null,
       exif: emptyUploadExif(),
       meta: createUploadMeta(file),
       status: 'processing',

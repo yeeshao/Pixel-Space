@@ -228,9 +228,11 @@ export const useUploadProcessing = ({
 
       entry.originalHash = hash;
       const nextExif = await readExif(entry.file);
+      const nextOriginalDimensions = await readImageDimensions(entry.file);
       const nextCompressed = await compressToWebp(entry.file);
       const nextDimensions = await readImageDimensions(nextCompressed);
       entry.exif = nextExif;
+      entry.originalDimensions = nextOriginalDimensions;
       entry.compressedFile = nextCompressed;
       entry.compressedDimensions = nextDimensions;
       if (nextExif.location_lat !== null && nextExif.location_lng !== null) {
@@ -337,6 +339,7 @@ export const useUploadProcessing = ({
       exif: entry.exif,
       meta: { ...entry.meta, folder_id: batchFolderId.value || null },
       dimensions: entry.compressedDimensions,
+      originalDimensions: entry.originalDimensions,
     });
 
     entry.status = 'uploading';

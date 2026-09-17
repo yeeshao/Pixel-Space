@@ -7,6 +7,7 @@ interface BuildUploadFormDataInput {
   exif: UploadExif;
   meta: UploadMeta;
   dimensions: UploadDimensions;
+  originalDimensions: UploadDimensions;
 }
 
 export function buildUploadFormData(input: BuildUploadFormDataInput): FormData {
@@ -17,5 +18,6 @@ export function buildUploadFormData(input: BuildUploadFormDataInput): FormData {
   formData.append('exif', JSON.stringify(input.exif));
   formData.append('meta', JSON.stringify(input.meta));
   formData.append('dimensions', JSON.stringify(input.dimensions));
+  formData.append('original_dimensions', JSON.stringify(input.originalDimensions));
   return formData;
 }
