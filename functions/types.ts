@@ -19,4 +19,7 @@ export interface Env {
   // 仅本地开发可用。线上 (request.cf 存在) 时被强制忽略，绝不参与生产鉴权。
   // 取值: 'admin' | 'visitor'，缺省视为 'admin'。
   LOCAL_ROLE?: string;
+  // 生产环境管理员账号与登录密码。按当前方案 ADMIN_PASSWORD_HASH 直接填写登录密码（建议仅用于私有部署）。
+  ADMIN_USERNAME?: string;
+  ADMIN_PASSWORD_HASH?: string;
 }
