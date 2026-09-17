@@ -813,3 +813,162 @@
   .folder-actions-panel .library-btn:last-child { grid-column:auto; }
   .path-panel .breadcrumb { padding:.2rem; }
 }
+
+
+/* ===== Console UI v3 polish ===== */
+.library-page {
+  gap: 1.25rem;
+}
+
+.library-header {
+  grid-template-columns: 1fr;
+  padding: 1.25rem;
+  gap: 1rem;
+}
+
+.library-title {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:.25rem 0 .75rem;
+}
+
+.dashboard-section-title span {
+  opacity:.7;
+  font-size:.85rem;
+}
+
+.ai-settings-panel {
+  border-left:0;
+  border-top:1px solid rgba(53,243,255,.12);
+  padding:1rem 0 0;
+}
+
+.ai-settings-panel .settings-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.8rem;
+}
+
+.content-panel {
+  border-radius:16px !important;
+  padding:1.15rem !important;
+  background:
+    linear-gradient(135deg,rgba(53,243,255,.04),transparent 35%),
+    rgba(8,10,25,.72);
+}
+
+.dashboard-panel-heading {
+  margin-bottom:.9rem;
+}
+
+.dashboard-panel-heading h2 {
+  font-size:1.05rem;
+  letter-spacing:.03em;
+}
+
+.folders-panel .folder-grid {
+  gap:1rem;
+}
+
+.folders-panel .folder-card {
+  min-height:8rem;
+  padding:1rem;
+  border-radius:14px;
+  transition:.2s ease;
+  position:relative;
+}
+
+.folders-panel .folder-card:hover {
+  transform:translateY(-2px);
+}
+
+.folder-visibility {
+  position:absolute;
+  right:.7rem;
+  top:.7rem;
+  border-radius:999px;
+  font-weight:700;
+}
+
+.folder-card .folder-name {
+  padding-right:4rem;
+  font-size:1rem;
+}
+
+.folder-card .folder-meta {
+  margin-top:.45rem;
+  line-height:1.5;
+}
+
+.library-actions {
+  gap:.75rem;
+}
+
+.library-btn {
+  min-height:2.5rem;
+  border-radius:10px;
+}
+
+.path-panel {
+  position:sticky;
+  top:.5rem;
+  z-index:5;
+}
+
+.path-panel .breadcrumb {
+  background:rgba(0,0,0,.18);
+  border-radius:10px;
+  padding:.5rem;
+}
+
+/* 图片区域 */
+.images-grid,
+.image-grid {
+  gap:1rem !important;
+}
+
+.image-card {
+  border-radius:14px;
+  overflow:hidden;
+}
+
+/* 统计卡片 */
+.stats-grid,
+.statistics-grid {
+  gap:.8rem;
+}
+
+.stats-grid > *,
+.statistics-grid > * {
+  border-radius:14px;
+  padding:1rem;
+  background:rgba(255,255,255,.035);
+}
+
+/* mobile */
+@media(max-width:768px){
+  .library-header {
+    padding:.8rem;
+  }
+
+  .ai-settings-panel .settings-grid {
+    grid-template-columns:1fr;
+  }
+
+  .content-panel {
+    padding:.8rem !important;
+  }
+
+  .folders-panel .folder-grid {
+    grid-template-columns:1fr !important;
+  }
+
+  .folder-actions-panel .library-actions {
+    grid-template-columns:1fr !important;
+  }
+
+  .path-panel {
+    position:relative;
+  }
+}
