@@ -12,8 +12,7 @@ interface AdminMe {
 const STORAGE_KEY = 'imgbed:dev-role';
 const DEV_HEADER = 'X-Dev-Role';
 const ME_ENDPOINT = '/api/admin/me';
-const ACCESS_LOGOUT_PATH = '/cdn-cgi/access/logout';
-const LOGOUT_REDIRECT_PATH = '/login';
+const LOGOUT_ENDPOINT = '/api/auth/logout';
 
 const readStoredRole = (): DevRole | null => {
   if (typeof localStorage === 'undefined') return null;
@@ -90,16 +89,18 @@ export const setDevRole = (next: DevRole): void => {
 };
 
 export const logoutAdmin = (): void => {
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV && devRole.value !== null) {
     adminEmail.value = null;
     setDevRole('visitor');
     return;
   }
 
-  if (typeof window === 'undefined') return;
-  const logoutUrl = new URL(ACCESS_LOGOUT_PATH, window.location.origin);
-  logoutUrl.searchParams.set('redirect_url', new URL(LOGOUT_REDIRECT_PATH, window.location.origin).toString());
-  window.location.assign(logoutUrl.toString());
+  void fetch(LOGOUT_ENDPOINT, { method: 'POST' })
+    .catch(() => undefined)
+    .finally(() => {
+      adminEmail.value = null;
+      if (typeof window !== 'undefined') window.location.assign('/login');
+    });
 };
 
 export const useAdmin = () => ({
