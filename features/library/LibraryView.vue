@@ -6,10 +6,10 @@ import type { ImageRecord } from '@/features/images/image.types';
 import DownloadGrantDialog from './DownloadGrantDialog.vue';
 import type { DownloadGrantRecord, FolderRecord } from './library.api';
 import LibraryContent from './LibraryContent.vue';
-import LibraryHeader from './LibraryHeader.vue';
-import LibraryMoveBar from './LibraryMoveBar.vue';
 import BatchLocationDialog from './BatchLocationDialog.vue';
 import TelegramInboxPanel from './TelegramInboxPanel.vue';
+import LibraryHeader from './LibraryHeader.vue';
+import LibraryMoveBar from './LibraryMoveBar.vue';
 import { useLibraryActions } from './useLibraryActions';
 import { useLibraryDirectory } from './useLibraryDirectory';
 
@@ -20,8 +20,8 @@ const images = ref<ImageRecord[]>([]);
 const downloadGrants = ref<DownloadGrantRecord[]>([]);
 
 const lightboxOpen = ref(false);
-const batchLocationOpen = ref(false);
 const lightboxImage = ref<ImageRecord | null>(null);
+const batchLocationOpen = ref(false);
 
 const {
   currentFolderId,
@@ -93,6 +93,9 @@ const showAdjacentImage = (offset: -1 | 1) => {
   lightboxImage.value = items[nextIndex];
 };
 
+const showPreviousImage = () => showAdjacentImage(-1);
+const showNextImage = () => showAdjacentImage(1);
+
 const openBatchLocation = () => {
   batchLocationOpen.value = true;
 };
@@ -102,8 +105,9 @@ const applyBatchLocation = async (payload: Parameters<typeof handleBatchLocation
   batchLocationOpen.value = false;
 };
 
-const showPreviousImage = () => showAdjacentImage(-1);
-const showNextImage = () => showAdjacentImage(1);
+const runBatchAi = () => {
+  void handleBatchAi();
+};
 
 const replaceImage = (img: ImageRecord) => {
   images.value = images.value.map((item) => (item.key === img.key ? img : item));
@@ -175,12 +179,18 @@ onMounted(refreshAll);
         @open-grant="grantDialogOpen = true"
         @move="handleMove"
         @batch-location="openBatchLocation"
-        @batch-ai="() => { void handleBatchAi(); }"
+        @batch-ai="runBatchAi"
         @delete="handleBatchDelete"
         @cancel="clearSelection"
       />
     </section>
 
+    <BatchLocationDialog
+      :open="batchLocationOpen"
+      :selected-count="selectedKeys.size"
+      @close="batchLocationOpen = false"
+      @save="applyBatchLocation"
+    />
     <ImageLightbox
       :open="lightboxOpen"
       :image="lightboxImage"
@@ -189,12 +199,6 @@ onMounted(refreshAll);
       @next="showNextImage"
       @updated="replaceImage"
       @deleted="removeImage"
-    />
-    <BatchLocationDialog
-      :open="batchLocationOpen"
-      :selected-count="selectedKeys.size"
-      @close="batchLocationOpen = false"
-      @save="applyBatchLocation"
     />
     <DownloadGrantDialog
       :open="grantDialogOpen"
