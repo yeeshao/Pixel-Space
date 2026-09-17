@@ -1,19 +1,58 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AppShell from '@/shared/ui/AppShell.vue';
 import { isAdmin, refreshAdmin } from '@/shared/auth/useAdmin';
-// Cloudflare Access 会把管理路径拦截到邮箱一次性验证码页；这页始终公开，作为说明入口。
-// 本地开发用 header 切换角色时，登录页要主动消费 redirect 查询，避免卡住。
 
 const route = useRoute();
 const router = useRouter();
+
+const username = ref('');
+const password = ref('');
+const loading = ref(false);
+const error = ref('');
 
 const consumeRedirectIfAdmin = () => {
   if (!isAdmin.value) return;
   const raw = route.query.redirect;
   const target = typeof raw === 'string' && raw.startsWith('/') ? raw : '/library';
   void router.replace(target);
+};
+
+const submit = async () => {
+  if (loading.value) return;
+  error.value = '';
+
+  if (!username.value.trim() || !password.value) {
+    error.value = '请输入账号和密码';
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        username: username.value.trim(),
+        password: password.value,
+      }),
+    });
+
+    if (!response.ok) {
+      error.value = response.status === 401 ? '账号或密码错误' : '登录服务暂时不可用，请稍后重试';
+      return;
+    }
+
+    password.value = '';
+    await refreshAdmin();
+    consumeRedirectIfAdmin();
+  } catch {
+    error.value = '网络错误，请稍后重试';
+  } finally {
+    loading.value = false;
+  }
 };
 
 onMounted(() => {
@@ -23,21 +62,6 @@ onMounted(() => {
 watch(isAdmin, (next) => {
   if (next) consumeRedirectIfAdmin();
 });
-
-const MAIL = {
-  vb: '0 0 512 512',
-  d: 'M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z',
-};
-
-const ARROW = {
-  vb: '0 0 448 512',
-  d: 'M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.7 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z',
-};
-
-const SHIELD = {
-  vb: '0 0 512 512',
-  d: 'M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.4 31 38.3 57.2c-.5 99.2-41.3 280.7-213.6 363.2c-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256 0z',
-};
 </script>
 
 <template>
@@ -59,8 +83,8 @@ const SHIELD = {
             <span class="scan" aria-hidden="true" />
 
             <div class="shield-wrap" aria-hidden="true">
-              <svg :viewBox="SHIELD.vb" fill="currentColor" class="shield">
-                <path :d="SHIELD.d" />
+              <svg viewBox="0 0 512 512" fill="currentColor" class="shield">
+                <path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.4 31 38.3 57.2c-.5 99.2-41.3 280.7-213.6 363.2c-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256 0z" />
               </svg>
             </div>
 
@@ -69,36 +93,54 @@ const SHIELD = {
                 <span class="brand-cyan">Pixel</span>
                 <span class="brand-pink">Space</span>
               </RouterLink>
-              <p class="kicker">Access Terminal</p>
-              <h1 class="title">管理员通道</h1>
-              <p class="desc">
-                管理路径由
-                <span class="hl">Cloudflare Access</span>
-                接管，未登录会自动跳到邮箱一次性验证码页。非白名单邮箱会被拒绝。
-              </p>
+              <p class="kicker">Admin Terminal</p>
+              <h1 class="title">管理员登录</h1>
+              <p class="desc">使用管理员账号和密码进入 Pixel Space 控制台。</p>
             </header>
 
-            <div class="actions">
-              <a href="/library" class="primary">
-                <svg :viewBox="MAIL.vb" fill="currentColor" class="primary-icon" aria-hidden="true">
-                  <path :d="MAIL.d" />
-                </svg>
-                <span>邮箱验证码登录</span>
-              </a>
+            <form class="actions" @submit.prevent="submit">
+              <label class="field">
+                <span>账号</span>
+                <input
+                  v-model="username"
+                  type="text"
+                  name="username"
+                  autocomplete="username"
+                  placeholder="管理员账号"
+                  :disabled="loading"
+                  autofocus
+                />
+              </label>
 
-              <div class="divider"><span>OR</span></div>
+              <label class="field">
+                <span>密码</span>
+                <input
+                  v-model="password"
+                  type="password"
+                  name="password"
+                  autocomplete="current-password"
+                  placeholder="管理员密码"
+                  :disabled="loading"
+                />
+              </label>
 
-              <RouterLink to="/images" class="secondary">
-                <span>浏览公开图库</span>
-                <svg :viewBox="ARROW.vb" fill="currentColor" class="secondary-icon" aria-hidden="true">
-                  <path :d="ARROW.d" />
-                </svg>
-              </RouterLink>
-            </div>
+              <p v-if="error" class="error" role="alert">{{ error }}</p>
+
+              <button class="primary" type="submit" :disabled="loading">
+                <span>{{ loading ? '正在验证…' : '账号密码登录' }}</span>
+              </button>
+            </form>
+
+            <div class="divider"><span>SECURE SESSION</span></div>
+
+            <RouterLink to="/images" class="secondary">
+              <span>浏览公开图库</span>
+              <span aria-hidden="true">→</span>
+            </RouterLink>
 
             <footer class="status">
               <span class="status-dot" aria-hidden="true" />
-              <span>EDGE :: Cloudflare Access · OTP · v0.1.0</span>
+              <span>EDGE :: PASSWORD · HTTPONLY SESSION</span>
             </footer>
           </article>
         </div>
@@ -108,6 +150,47 @@ const SHIELD = {
 </template>
 
 <style scoped>
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  text-align: left;
+}
+.field span {
+  color: rgb(148, 163, 184);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(53, 243, 255, 0.22);
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  color: white;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field input::placeholder { color: rgba(148, 163, 184, 0.45); }
+.field input:focus {
+  border-color: rgb(53, 243, 255);
+  box-shadow: 0 0 0 3px rgba(53, 243, 255, 0.08);
+}
+.primary:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  transform: none;
+}
+.error {
+  margin: 0;
+  color: rgb(255, 120, 150);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 .access-stage {
   position: relative;
   min-height: 100vh;
