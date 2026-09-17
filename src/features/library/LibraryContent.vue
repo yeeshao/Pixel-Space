@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import type { ImageRecord } from '@/features/images/image.types';
 import { imageSortOptions, type ImageSortMode } from '@/features/images/image-sort';
 import SelectPopover from '@/shared/ui/SelectPopover.vue';
@@ -27,6 +28,8 @@ const props = defineProps<{
   grantManagingId: string | null;
   selectedKeys: Set<string>;
   subfolders: FolderRecord[];
+  folders: FolderRecord[];
+  folderOptions: Array<{ id: string; label: string; depth: number }>;
 }>();
 
 const sortMode = defineModel<ImageSortMode>('sortMode', { required: true });
@@ -41,6 +44,9 @@ const emit = defineEmits<{
   dragSelect: [key: string];
   updateGrant: [id: string, expiresAt: string];
   toggleFolderVisibility: [folder: FolderRecord];
+  renameFolder: [folder: FolderRecord];
+  moveFolder: [folder: FolderRecord, targetId: string | null];
+  deleteFolder: [folder: FolderRecord];
 }>();
 
 const {
@@ -54,6 +60,54 @@ const {
   canSelect: () => !props.currentReadonly,
   select: (key) => emit('dragSelect', key),
 });
+
+const folderMoveOpen = ref(false);
+const folderMoveSource = ref<FolderRecord | null>(null);
+const folderMoveTarget = ref<string>('__root__');
+
+const folderMoveDescendants = computed(() => {
+  const source = folderMoveSource.value;
+  if (!source) return new Set<string>();
+  const result = new Set<string>();
+  let frontier = [source.id];
+  while (frontier.length) {
+    const next: string[] = [];
+    for (const folder of props.folders) {
+      if (folder.parent_id && frontier.includes(folder.parent_id) && !result.has(folder.id)) {
+        result.add(folder.id);
+        next.push(folder.id);
+      }
+    }
+    frontier = next;
+  }
+  return result;
+});
+
+const folderMoveOptions = computed(() => props.folderOptions.filter((option) => {
+  if (!folderMoveSource.value) return false;
+  if (option.id === folderMoveSource.value.id) return false;
+  if (folderMoveDescendants.value.has(option.id)) return false;
+  return true;
+}));
+
+const openFolderMove = (folder: FolderRecord) => {
+  folderMoveSource.value = folder;
+  folderMoveTarget.value = folder.parent_id ?? '__root__';
+  folderMoveOpen.value = true;
+};
+
+const closeFolderMove = () => {
+  folderMoveOpen.value = false;
+  folderMoveSource.value = null;
+};
+
+const submitFolderMove = () => {
+  const folder = folderMoveSource.value;
+  if (!folder) return;
+  const target = folderMoveTarget.value === '__root__' ? null : folderMoveTarget.value;
+  emit('moveFolder', folder, target);
+  closeFolderMove();
+};
 
 const handleTileClick = (img: ImageRecord) => {
   if (shouldSuppressClick()) return;
@@ -119,6 +173,12 @@ const handleTileClick = (img: ImageRecord) => {
             </button>
           </div>
           <p class="folder-meta">包含 {{ folder.image_count }} 张图片 · {{ folder.child_count }} 个直接子目录</p>
+          <div class="folder-actions-row">
+            <button type="button" class="folder-action-btn primary" @click.stop="emit('enterFolder', folder.id)">进入</button>
+            <button type="button" class="folder-action-btn" @click.stop="emit('renameFolder', folder)">重命名</button>
+            <button type="button" class="folder-action-btn" @click.stop="openFolderMove(folder)">移动</button>
+            <button type="button" class="folder-action-btn danger" :disabled="folder.image_count > 0 || folder.child_count > 0" :title="folder.image_count > 0 || folder.child_count > 0 ? '请先清空图片和子目录' : '删除空文件夹'" @click.stop="emit('deleteFolder', folder)">删除</button>
+          </div>
         </div>
       </article>
       </div>
@@ -197,6 +257,32 @@ const handleTileClick = (img: ImageRecord) => {
         </button>
       </div>
     </section>
+
+    <div v-if="folderMoveOpen" class="folder-dialog-backdrop" @click.self="closeFolderMove">
+      <section class="folder-dialog" role="dialog" aria-modal="true" aria-labelledby="folder-move-title">
+        <header class="folder-dialog-heading">
+          <div>
+            <span class="folder-dialog-kicker">文件夹整体操作</span>
+            <h2 id="folder-move-title">移动「{{ folderMoveSource?.name }}」</h2>
+            <p>移动的是整个文件夹，里面的图片和子文件夹会一起保留。</p>
+          </div>
+          <button type="button" class="folder-dialog-close" aria-label="关闭" @click="closeFolderMove">×</button>
+        </header>
+        <label class="folder-dialog-field">
+          <span>目标位置</span>
+          <select v-model="folderMoveTarget" class="settings-input">
+            <option value="__root__">根目录</option>
+            <option v-for="option in folderMoveOptions" :key="option.id" :value="option.id">
+              {{ '　'.repeat(option.depth) }}{{ option.label }}
+            </option>
+          </select>
+        </label>
+        <footer class="folder-dialog-actions">
+          <button type="button" class="library-btn" @click="closeFolderMove">取消</button>
+          <button type="button" class="library-btn primary" @click="submitFolderMove">确认移动</button>
+        </footer>
+      </section>
+    </div>
 
     <section v-if="currentFolderId === null" class="image-stats-panel" aria-label="图片统计">
       <header class="image-stats-heading">

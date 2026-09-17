@@ -217,6 +217,82 @@ export const useLibraryActions = ({
     }
   };
 
+  const handleRenameFolder = async (folder: FolderRecord) => {
+    const next = window.prompt('重命名文件夹', folder.name)?.trim();
+    if (!next || next === folder.name) return;
+    try {
+      const updated = await updateFolder(folder.id, { name: next });
+      folders.value = folders.value.map((item) =>
+        item.id === folder.id ? { ...item, name: updated.name, updated_at: updated.updated_at ?? item.updated_at } : item,
+      );
+      actionMessage.value = `已重命名「${folder.name}」为「${next}」`;
+    } catch (error) {
+      const message = (error as Error).message;
+      actionMessage.value = message.includes('name_conflict') ? '同级目录里已经有同名文件夹' : `重命名失败：${message}`;
+    }
+  };
+
+  const handleMoveFolder = async (folder: FolderRecord, targetId: string | null) => {
+    if (targetId === folder.id) {
+      actionMessage.value = '不能把文件夹移动到自己里面';
+      return;
+    }
+
+    // 本地先检查目标是否属于当前目录的后代，避免无意义请求；后端仍会再次校验。
+    const descendants = new Set<string>();
+    let frontier = [folder.id];
+    while (frontier.length > 0) {
+      const next: string[] = [];
+      for (const item of folders.value) {
+        if (item.parent_id && frontier.includes(item.parent_id) && !descendants.has(item.id)) {
+          descendants.add(item.id);
+          next.push(item.id);
+        }
+      }
+      frontier = next;
+    }
+    if (targetId !== null && descendants.has(targetId)) {
+      actionMessage.value = '不能把文件夹移动到自己的子文件夹中';
+      return;
+    }
+    if (targetId === folder.parent_id) {
+      actionMessage.value = '目标就是当前所在目录';
+      return;
+    }
+
+    try {
+      await updateFolder(folder.id, { parent_id: targetId });
+      const targetName = targetId ? folders.value.find((item) => item.id === targetId)?.name ?? '目标文件夹' : '根目录';
+      folders.value = folders.value.map((item) =>
+        item.id === folder.id ? { ...item, parent_id: targetId, updated_at: new Date().toISOString() } : item,
+      );
+      await refreshAll();
+      actionMessage.value = `已将「${folder.name}」移动到 ${targetName}`;
+    } catch (error) {
+      const message = (error as Error).message;
+      actionMessage.value = message.includes('name_conflict') ? '目标目录里已经有同名文件夹' : `移动文件夹失败：${message}`;
+    }
+  };
+
+  const handleDeleteFolder = async (folder: FolderRecord) => {
+    if (folder.image_count > 0 || folder.child_count > 0) {
+      actionMessage.value = `「${folder.name}」不为空，请先移走里面的图片和子目录`;
+      return;
+    }
+    if (!window.confirm(`确定删除空文件夹「${folder.name}」？`)) return;
+    try {
+      await deleteFolder(folder.id);
+      folders.value = folders.value.filter((item) => item.id !== folder.id);
+      if (currentFolderId.value === folder.id) currentFolderId.value = folder.parent_id;
+      actionMessage.value = `已删除「${folder.name}」`;
+    } catch (error) {
+      const message = (error as Error).message;
+      actionMessage.value = message.includes('not_empty')
+        ? '当前文件夹不为空，请先移走里面的图片和子目录'
+        : `删除文件夹失败：${message}`;
+    }
+  };
+
   const handleRenameCurrent = async () => {
     const folder = currentFolder.value;
     if (!folder) return;
@@ -412,6 +488,9 @@ export const useLibraryActions = ({
     handleUpdateDownloadGrant,
     handleDeleteDownloadGrant,
     handleCreateFolder,
+    handleRenameFolder,
+    handleMoveFolder,
+    handleDeleteFolder,
     handleRenameCurrent,
     handleToggleFolderVisibility,
     handleDeleteCurrent,

@@ -972,3 +972,172 @@
     position:relative;
   }
 }
+
+/* ===== Folder whole-folder operations ===== */
+.folder-actions-row {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:.45rem;
+  margin-top:.8rem;
+  padding-top:.7rem;
+  border-top:1px solid rgba(148,163,184,.10);
+}
+
+.folder-action-btn {
+  min-width:0;
+  min-height:32px;
+  padding:.35rem .55rem;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:8px;
+  background:rgba(7,13,27,.72);
+  color:rgba(226,232,240,.86);
+  font:inherit;
+  font-size:.75rem;
+  font-weight:650;
+  cursor:pointer;
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,color .16s ease;
+}
+
+.folder-action-btn:hover,
+.folder-action-btn:focus-visible {
+  transform:translateY(-1px);
+  border-color:rgba(53,243,255,.42);
+  background:rgba(53,243,255,.08);
+  color:#d9fbff;
+  outline:none;
+}
+
+.folder-action-btn.primary {
+  border-color:rgba(53,243,255,.34);
+  background:rgba(53,243,255,.10);
+  color:#a5f3fc;
+}
+
+.folder-action-btn.danger {
+  border-color:rgba(251,113,133,.22);
+  color:rgba(253,164,175,.88);
+}
+
+.folder-action-btn.danger:hover,
+.folder-action-btn.danger:focus-visible {
+  border-color:rgba(251,113,133,.5);
+  background:rgba(251,113,133,.08);
+  color:#fecdd3;
+}
+
+.folder-action-btn:disabled {
+  opacity:.38;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.folder-dialog-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:80;
+  display:grid;
+  place-items:center;
+  padding:1rem;
+  background:rgba(2,6,23,.72);
+  backdrop-filter:blur(7px);
+}
+
+.folder-dialog {
+  width:min(520px,100%);
+  border:1px solid rgba(53,243,255,.20);
+  border-radius:18px;
+  padding:1.15rem;
+  background:linear-gradient(145deg,rgba(10,18,34,.98),rgba(10,8,25,.98));
+  box-shadow:0 24px 80px rgba(0,0,0,.48),0 0 0 1px rgba(255,255,255,.025) inset;
+}
+
+.folder-dialog-heading {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+  margin-bottom:1.1rem;
+}
+
+.folder-dialog-heading h2 {
+  margin:.18rem 0 .3rem;
+  font-size:1.1rem;
+}
+
+.folder-dialog-heading p {
+  margin:0;
+  color:rgba(148,163,184,.82);
+  font-size:.82rem;
+  line-height:1.55;
+}
+
+.folder-dialog-kicker {
+  color:#67e8f9;
+  font-size:.68rem;
+  font-weight:750;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.folder-dialog-close {
+  width:32px;
+  height:32px;
+  flex:0 0 auto;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:9px;
+  background:rgba(255,255,255,.035);
+  color:rgba(226,232,240,.72);
+  font-size:1.25rem;
+  line-height:1;
+  cursor:pointer;
+}
+
+.folder-dialog-field {
+  display:grid;
+  gap:.45rem;
+}
+
+.folder-dialog-field > span {
+  color:rgba(226,232,240,.78);
+  font-size:.76rem;
+  font-weight:700;
+}
+
+.folder-dialog-field select {
+  width:100%;
+  min-height:42px;
+  cursor:pointer;
+}
+
+.folder-dialog-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap:.6rem;
+  margin-top:1.15rem;
+}
+
+@media(max-width:720px){
+  .folder-actions-row {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .folder-dialog {
+    padding:1rem;
+    border-radius:15px;
+  }
+}
+
+@media(max-width:420px){
+  .folder-actions-row {
+    grid-template-columns:1fr 1fr;
+  }
+
+  .folder-action-btn {
+    min-height:36px;
+  }
+
+  .folder-dialog-actions {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+}

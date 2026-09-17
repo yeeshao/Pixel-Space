@@ -62,6 +62,9 @@ const {
   handleUpdateDownloadGrant,
   handleDeleteDownloadGrant,
   handleCreateFolder,
+  handleRenameFolder,
+  handleMoveFolder,
+  handleDeleteFolder,
   handleRenameCurrent,
   handleDeleteCurrent,
   handleToggleFolderVisibility,
@@ -153,6 +156,8 @@ onMounted(refreshAll);
         :grant-managing-id="grantManagingId"
         :selected-keys="selectedKeys"
         :subfolders="subfolders"
+        :folders="folders"
+        :folder-options="folderOptions"
         @update-grant="handleUpdateDownloadGrant"
         @delete-grant="handleDeleteDownloadGrant"
         @enter-folder="enterFolder"
@@ -162,6 +167,9 @@ onMounted(refreshAll);
         @drag-select="selectKey"
         @open-lightbox="openLightbox"
         @toggle-folder-visibility="handleToggleFolderVisibility"
+        @rename-folder="handleRenameFolder"
+        @move-folder="handleMoveFolder"
+        @delete-folder="handleDeleteFolder"
       />
 
 
