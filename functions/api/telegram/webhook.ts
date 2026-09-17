@@ -206,10 +206,10 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/telegr
 
     await env.DB.prepare(`
       INSERT INTO images (
-        key,title,caption,original_filename,width,height,format,bytes_compressed,hash,
+        key,title,caption,original_filename,width,height,format,bytes_compressed,original_bytes,original_width,original_height,hash,
         location_name,location_lat,location_lng,location_region,tags_json,search_content,
         ai_status,tg_file_id,tg_message_id,tg_chat_id,tg_status,is_public,location_public
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).bind(
       key,
       parsed.title,
@@ -219,6 +219,9 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/telegr
       height,
       format,
       bytes,
+      bytes > 0 ? bytes : null,
+      width > 0 ? width : null,
+      height > 0 ? height : null,
       stagingHash,
       null,
       null,

@@ -10,6 +10,17 @@ import { geocodeRegionForCoordinate } from '@/features/upload/useUploadPickMap';
 import { discardTelegramImage, listTelegramInbox, processTelegramImage } from './telegram-inbox.api';
 
 const MAX_EDGE = 2048;
+const formatBytes = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(2)} ${units[index]}`;
+};
 const items = ref<ImageRecord[]>([]);
 const loading = ref(false);
 const processingKey = ref<string | null>(null);
@@ -87,6 +98,7 @@ const processOne = async (item: ImageRecord) => {
     const blob = await response.blob();
     const originalName = item.original_filename || `${item.key}.jpg`;
     const original = new File([blob], originalName, { type: inferImageMime(originalName, blob.type) });
+    const originalDimensions = await readDimensions(original);
     const hash = await sha256HexFromFile(original);
     const exif = await readExif(original);
     const compressedBlob = await imageCompression(original, {
@@ -139,7 +151,16 @@ const processOne = async (item: ImageRecord) => {
       };
     }
 
-    const processed = await processTelegramImage(item.key, { compressed, hash, dimensions, exif, meta, ai });
+    const processed = await processTelegramImage(item.key, {
+      compressed,
+      hash,
+      dimensions,
+      original_dimensions: originalDimensions,
+      original_bytes: original.size,
+      exif,
+      meta,
+      ai,
+    });
     items.value = items.value.filter((entry) => entry.key !== item.key);
     emit('processed', processed);
   } catch (e) {
@@ -191,7 +212,8 @@ onUnmounted(() => {
         <img :src="item.public_url" :alt="item.title || item.original_filename" loading="lazy" />
         <div class="telegram-inbox-info">
           <strong>{{ item.title || item.original_filename }}</strong>
-          <span>{{ item.width || '—' }} × {{ item.height || '—' }} · {{ item.format.toUpperCase() }}</span>
+          <span>原图 {{ item.original_width && item.original_height ? `${item.original_width} × ${item.original_height}` : (item.width && item.height ? `${item.width} × ${item.height}` : '未识别') }}</span>
+          <span>原图 {{ item.original_bytes ? formatBytes(item.original_bytes) : '未记录' }} · 预览 {{ item.width || '—' }} × {{ item.height || '—' }}</span>
           <div class="telegram-inbox-card-actions">
             <button type="button" class="library-btn small primary" :disabled="!!processingKey" @click="processOne(item)">
               {{ processingKey === item.key ? '处理中…' : '处理并入库' }}

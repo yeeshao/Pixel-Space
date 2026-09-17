@@ -13,6 +13,8 @@ export interface TelegramProcessPayload {
   compressed: File;
   hash: string;
   dimensions: { width: number; height: number };
+  original_dimensions: { width: number; height: number };
+  original_bytes: number;
   exif: UploadExif;
   meta: {
     title: string;
@@ -48,6 +50,8 @@ export async function processTelegramImage(key: string, payload: TelegramProcess
   formData.append('compressed', payload.compressed, payload.compressed.name);
   formData.append('hash', payload.hash);
   formData.append('dimensions', JSON.stringify(payload.dimensions));
+  formData.append('original_dimensions', JSON.stringify(payload.original_dimensions));
+  formData.append('original_bytes', String(payload.original_bytes));
   formData.append('exif', JSON.stringify(payload.exif));
   formData.append('meta', JSON.stringify(payload.meta));
   if (payload.ai) formData.append('ai', JSON.stringify(payload.ai));
