@@ -230,7 +230,7 @@
 .nav-arrow {
   position: absolute;
   top: 50%;
-  z-index: 12;
+  z-index: 20;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
@@ -252,6 +252,11 @@
 
 .nav-arrow-right {
   right: 24px;
+}
+
+/* 详情抽屉打开时，右侧翻页按钮仍保留在图片区域内，避免被抽屉覆盖 */
+.viewer-container.details-open .nav-arrow-right {
+  right: calc(420px + 24px);
 }
 
 .nav-arrow:hover {
@@ -283,6 +288,9 @@
     left: 10px;
   }
   .nav-arrow-right {
+    right: 10px;
+  }
+  .viewer-container.details-open .nav-arrow-right {
     right: 10px;
   }
   .image-canvas.has-drawer {

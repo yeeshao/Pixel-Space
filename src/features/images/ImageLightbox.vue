@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
         <div class="cyber-image-viewer">
           <div class="viewer-backdrop" @click="handleViewerSurfaceClick" aria-hidden="true" />
 
-          <div class="viewer-container">
+          <div class="viewer-container" :class="{ 'details-open': detailsOpen }">
             <ImageLightboxToolbar
               :image="image"
               :copied="copied"
