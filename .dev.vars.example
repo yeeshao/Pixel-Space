@@ -1,6 +1,8 @@
 # Telegram original image archive.
 TG_BOT_TOKEN=
 TG_CHAT_ID=
+TG_WEBHOOK_SECRET=
+TG_AUTO_AI=true
 
 # OpenAI-compatible AI proxy auth key.
 PROXY_KEY=
