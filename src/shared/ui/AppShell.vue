@@ -177,17 +177,16 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll));
               <span>注销</span>
             </button>
           </template>
-          <template v-else>
-            <RouterLink
-              to="/login"
-              class="login-btn group flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium tracking-wide text-neon-cyan transition-all duration-200 hover:-translate-y-px hover:text-white hover:shadow-[0_2px_8px_rgba(53,243,255,0.15)]"
-            >
-              <svg :viewBox="ICONS.plug.vb" fill="currentColor" class="h-3 w-3 opacity-90 transition-transform group-hover:rotate-12" aria-hidden="true">
-                <path :d="ICONS.plug.d" />
-              </svg>
-              <span>接入</span>
-            </RouterLink>
-          </template>
+          <RouterLink
+            v-else
+            to="/login"
+            class="login-btn group flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium tracking-wide text-neon-cyan transition-all duration-200 hover:-translate-y-px hover:text-white hover:shadow-[0_2px_8px_rgba(53,243,255,0.15)]"
+          >
+            <svg :viewBox="ICONS.plug.vb" fill="currentColor" class="h-3 w-3 opacity-90 transition-transform group-hover:rotate-12" aria-hidden="true">
+              <path :d="ICONS.plug.d" />
+            </svg>
+            <span>接入</span>
+          </RouterLink>
         </div>
 
         <div v-if="isScrolled" class="scan-line pointer-events-none absolute bottom-0 left-0 h-px w-24" aria-hidden="true" />
