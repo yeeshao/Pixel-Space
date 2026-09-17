@@ -118,6 +118,7 @@ onMounted(refreshAll);
         :breadcrumb="breadcrumb"
         :current-folder="currentFolder"
         :current-folder-id="currentFolderId"
+        :current-virtual="currentVirtual"
         :virtual-counts="virtualCounts"
         @enter-folder="enterFolder"
         @create-folder="handleCreateFolder"
