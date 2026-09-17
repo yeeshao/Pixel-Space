@@ -13,6 +13,8 @@ const emit = defineEmits<{
   cancel: [];
   delete: [];
   move: [];
+  batchLocation: [];
+  batchAi: [];
   openGrant: [];
 }>();
 </script>
@@ -37,6 +39,8 @@ const emit = defineEmits<{
       </label>
       <button type="button" class="library-btn primary" @click="emit('openGrant')">生成验证码</button>
       <button type="button" class="library-btn primary" @click="emit('move')">移动</button>
+      <button type="button" class="library-btn primary" @click="emit('batchLocation')">批量位置</button>
+      <button type="button" class="library-btn primary" @click="emit('batchAi')">批量 AI</button>
       <button type="button" class="library-btn danger" @click="emit('delete')">删除</button>
       <button type="button" class="library-btn ghost" @click="emit('cancel')">取消</button>
     </div>

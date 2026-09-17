@@ -4,6 +4,8 @@ export interface Env {
   PUBLIC_BASE_URL: string;
   TG_BOT_TOKEN: string;
   TG_CHAT_ID: string;
+  TG_WEBHOOK_SECRET?: string;
+  TG_AUTO_AI?: string;
   PROXY_KEY: string;
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_AUD?: string;

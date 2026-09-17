@@ -158,6 +158,8 @@ onMounted(refreshAll);
         :selected-count="selectedKeys.size"
         @open-grant="grantDialogOpen = true"
         @move="handleMove"
+        @batch-location="handleBatchLocation"
+        @batch-ai="handleBatchAi"
         @delete="handleBatchDelete"
         @cancel="clearSelection"
       />

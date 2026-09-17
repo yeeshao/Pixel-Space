@@ -347,3 +347,21 @@ pnpm build
 ## License
 
 Pixel Space 的源码按 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/) 提供非商业使用授权。禁止销售、付费托管、并入商业产品或用于任何商业用途。详见 [LICENSE](./LICENSE)。
+
+## Telegram 机器人导入
+
+部署后可把 Telegram Bot Webhook 指向：
+`https://你的域名/api/telegram/webhook`
+
+需要配置：
+- `TG_BOT_TOKEN`：BotFather 创建 Bot 后获得
+- `TG_CHAT_ID`：允许导入的 Telegram 聊天 ID；可填多个，用逗号分隔
+- `TG_WEBHOOK_SECRET`：自己生成的随机密钥，可选但建议设置
+- `TG_AUTO_AI=true`：Telegram 导入后自动进行 AI 分析；设为 `false` 可关闭
+
+Telegram 发送照片或图片文件即可导入。图片说明支持：
+- 第一行/正文作为标题
+- `#标签` 自动保存为标签
+- `@geo 纬度,经度` 自动保存位置，例如 `@geo 31.2304,121.4737`
+
+管理控制台选中多张图片后支持“批量位置”和“批量 AI”。AI 每批最多处理 5 张，前端自动分批执行，避免单次请求过长。

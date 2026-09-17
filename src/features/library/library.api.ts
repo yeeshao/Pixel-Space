@@ -159,3 +159,24 @@ export function deleteDownloadGrant(id: string): Promise<void> {
     method: 'DELETE',
   }).then(() => undefined);
 }
+
+export interface BatchImagesResponse {
+  ok: boolean;
+  action: 'location' | 'ai';
+  processed: number;
+  items: ImageRecord[];
+}
+
+export function batchUpdateLocation(payload: { keys: string[]; location_name: string | null; location_lat: number | null; location_lng: number | null; location_region: 'china' | 'global' | null }): Promise<BatchImagesResponse> {
+  return jsonFetch<BatchImagesResponse>('/api/admin/images/batch', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ action: 'location', ...payload }),
+  });
+}
+
+export function batchAnalyzeAi(keys: string[]): Promise<BatchImagesResponse> {
+  return jsonFetch<BatchImagesResponse>('/api/admin/images/batch', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ action: 'ai', keys }),
+  });
+}
