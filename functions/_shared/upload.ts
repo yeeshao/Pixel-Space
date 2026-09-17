@@ -194,6 +194,8 @@ export const handleUploadPost = async (
   const rawExif = objectFromJsonField(formData, 'exif');
   const rawMeta = objectFromJsonField(formData, 'meta');
   const rawDimensions = objectFromJsonField(formData, 'dimensions');
+  const telegramInboxIdValue = formData.get('telegram_inbox_id');
+  const telegramInboxId = typeof telegramInboxIdValue === 'string' ? telegramInboxIdValue.trim() : '';
 
   if (!original || !compressed || !hash || !rawExif || !rawMeta || !rawDimensions) {
     return badRequest('missing_upload_fields');
@@ -220,11 +222,24 @@ export const handleUploadPost = async (
 
   let r2ObjectWritten = false;
   let d1ImageInserted = false;
+  let telegramInbox: { id: string; r2_key: string; tg_file_id: string; tg_message_id: number; tg_chat_id: string; original_filename: string } | null = null;
 
   try {
     const existing = await env.DB.prepare(SELECT_BY_HASH_SQL).bind(hash).first<ImageRow>();
     if (existing) {
+      if (telegramInboxId) {
+        const staged = await env.DB.prepare("SELECT id,r2_key FROM telegram_inbox WHERE id = ? AND status = 'pending'").bind(telegramInboxId).first<{ id: string; r2_key: string }>();
+        if (staged) {
+          await env.BUCKET.delete(staged.r2_key);
+          await env.DB.prepare('DELETE FROM telegram_inbox WHERE id = ?').bind(staged.id).run();
+        }
+      }
       return json(rowToRecord(existing, env.PUBLIC_BASE_URL), 200);
+    }
+
+    if (telegramInboxId) {
+      telegramInbox = await env.DB.prepare("SELECT id,r2_key,tg_file_id,tg_message_id,tg_chat_id,original_filename FROM telegram_inbox WHERE id = ? AND status = 'pending' AND hash = ?").bind(telegramInboxId, hash).first<typeof telegramInbox>();
+      if (!telegramInbox) return badRequest('telegram_inbox_not_found_or_hash_mismatch');
     }
 
     const staticMapReferer = staticMapRefererFromRequest(request);
@@ -271,6 +286,11 @@ export const handleUploadPost = async (
       .run();
     d1ImageInserted = true;
 
+    if (telegramInbox) {
+      await env.DB.prepare(`UPDATE images SET tg_file_id=?,tg_message_id=?,tg_chat_id=?,tg_status='done',tg_error=NULL,updated_at=datetime('now') WHERE key=?`)
+        .bind(telegramInbox.tg_file_id, telegramInbox.tg_message_id, telegramInbox.tg_chat_id, key).run();
+    }
+
     const staticMapTask = createStaticMapCacheTask(
       env,
       meta.location_lat,
@@ -281,10 +301,17 @@ export const handleUploadPost = async (
     );
     if (staticMapTask) await staticMapTask;
 
-    if (typeof context.waitUntil === 'function') {
-      context.waitUntil(deferTask(() => archiveOriginalAfterUpload(env, original, key, logger)));
-    } else {
-      await archiveOriginalAfterUpload(env, original, key, logger);
+    if (telegramInbox) {
+      await env.BUCKET.delete(telegramInbox.r2_key);
+      await env.DB.prepare('DELETE FROM telegram_inbox WHERE id = ?').bind(telegramInbox.id).run();
+    }
+
+    if (!telegramInbox) {
+      if (typeof context.waitUntil === 'function') {
+        context.waitUntil(deferTask(() => archiveOriginalAfterUpload(env, original, key, logger)));
+      } else {
+        await archiveOriginalAfterUpload(env, original, key, logger);
+      }
     }
 
     const row = await env.DB.prepare(SELECT_SQL).bind(key).first<ImageRow>();

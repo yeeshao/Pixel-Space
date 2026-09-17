@@ -6,6 +6,8 @@ export interface Env {
   TG_CHAT_ID: string;
   TG_WEBHOOK_SECRET?: string;
   TG_AUTO_AI?: string;
+  TG_WEBHOOK_SECRET?: string;
+  TG_AUTO_AI?: string;
   PROXY_KEY: string;
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_AUD?: string;
