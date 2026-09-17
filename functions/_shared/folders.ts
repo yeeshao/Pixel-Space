@@ -12,14 +12,13 @@ export interface FolderRecord extends FolderRow {
   child_count: number;
 }
 
-// SQL：拉所有文件夹并左联图片表统计直接子图片数 + 直接子目录数。
-// 不递归汇总：每个文件夹只看自己一层，UI 显示的「文件夹大小」由调用方自行决定要不要展开。
+// SQL：递归统计文件夹自身及所有子目录图片数量。
 export const LIST_FOLDERS_SQL = `
 WITH RECURSIVE
 descendants(root_id, id) AS (
   SELECT id, id
   FROM folders
-  UNION ALL
+  UNION
   SELECT d.root_id, f.id
   FROM descendants d
   JOIN folders f ON f.parent_id = d.id
@@ -77,7 +76,7 @@ descendants(root_id, id) AS (
   SELECT id, id
   FROM folders
   WHERE id IN (SELECT id FROM visible_folders)
-  UNION ALL
+  UNION
   SELECT d.root_id, f.id
   FROM descendants d
   JOIN folders f ON f.parent_id = d.id
