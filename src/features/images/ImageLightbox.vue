@@ -23,6 +23,12 @@ const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
 const detailsOpen = ref(false);
 const imageControlsHidden = ref(false);
+const originalLoading = ref(false);
+const originalLoaded = ref(false);
+const originalError = ref<string | null>(null);
+const originalObjectUrl = ref<string | null>(null);
+let originalRequestId = 0;
+let originalAbortController: AbortController | null = null;
 
 const {
   ZOOM_STEP,
@@ -98,6 +104,71 @@ const {
   editForm,
 });
 
+const revokeOriginalObjectUrl = () => {
+  if (originalObjectUrl.value) {
+    URL.revokeObjectURL(originalObjectUrl.value);
+    originalObjectUrl.value = null;
+  }
+};
+
+const resetOriginalState = () => {
+  originalRequestId += 1;
+  originalAbortController?.abort();
+  originalAbortController = null;
+  originalLoading.value = false;
+  originalLoaded.value = false;
+  originalError.value = null;
+  revokeOriginalObjectUrl();
+};
+
+const displayImageUrl = computed(() => originalObjectUrl.value || image.value?.public_url || '');
+
+const loadOriginal = async () => {
+  if (!image.value || originalLoading.value || originalLoaded.value) return;
+  const requestId = ++originalRequestId;
+  originalAbortController?.abort();
+  const controller = new AbortController();
+  originalAbortController = controller;
+  originalLoading.value = true;
+  originalError.value = null;
+
+  try {
+    const response = await fetch(originalUrl.value, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const payload = await response.json() as { error?: string };
+        detail = payload.error ? `：${payload.error}` : '';
+      } catch {
+        // Ignore non-JSON error responses.
+      }
+      throw new Error(`加载原图失败（${response.status}）${detail}`);
+    }
+
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('原图为空');
+    if (requestId !== originalRequestId) return;
+
+    const objectUrl = URL.createObjectURL(blob);
+    revokeOriginalObjectUrl();
+    originalObjectUrl.value = objectUrl;
+    originalLoaded.value = true;
+  } catch (error) {
+    if (controller.signal.aborted || requestId !== originalRequestId) return;
+    originalError.value = error instanceof Error ? error.message : '加载原图失败';
+  } finally {
+    if (requestId === originalRequestId) {
+      originalLoading.value = false;
+      originalAbortController = null;
+    }
+  }
+};
+
 const toggleDetails = () => {
   detailsOpen.value = !detailsOpen.value;
 };
@@ -139,6 +210,7 @@ watch(
       copied.value = false;
       detailsOpen.value = false;
       imageControlsHidden.value = false;
+      resetOriginalState();
       aiEditOpen.value = false;
       locationEditOpen.value = false;
       resetZoom();
@@ -152,6 +224,7 @@ watch(
   () => props.image,
   (image) => {
     resetForm(image);
+    resetOriginalState();
     resetZoom();
     imageControlsHidden.value = false;
   },
@@ -161,6 +234,8 @@ watch(
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKey);
   document.body.style.overflow = '';
+  originalAbortController?.abort();
+  revokeOriginalObjectUrl();
   clearCopyTimer();
 });
 </script>
@@ -178,17 +253,21 @@ onBeforeUnmount(() => {
               :copied="copied"
               :details-open="detailsOpen"
               :original-url="originalUrl"
+              :original-loading="originalLoading"
+              :original-loaded="originalLoaded"
               :saving="saving"
               :deleting="deleting"
               @close="emit('close')"
               @share="sharePage"
               @toggle-details="toggleDetails"
+              @load-original="loadOriginal"
               @delete="deleteCurrentImage"
             />
 
             <div class="viewer-content">
               <ImageLightboxCanvas
                 :image="image"
+                :image-src="displayImageUrl"
                 :details-open="detailsOpen"
                 :image-controls-hidden="imageControlsHidden"
                 :is-panning="isPanning"
@@ -210,6 +289,16 @@ onBeforeUnmount(() => {
                 @image-pointer-up="onImagePointerUp"
                 @image-double-click="onImageDoubleClick"
               />
+
+              <div
+                v-if="originalLoading || originalError"
+                class="original-load-status"
+                :class="{ 'is-error': originalError }"
+                role="status"
+              >
+                <span v-if="originalLoading">正在加载原图…</span>
+                <span v-else>{{ originalError }}</span>
+              </div>
 
               <ImageLightboxDetailsDrawer
                 :image="image"

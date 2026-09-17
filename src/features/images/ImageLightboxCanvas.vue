@@ -5,6 +5,7 @@ import { useImageSwipeNavigation } from './useImageSwipeNavigation';
 
 const props = defineProps<{
   image?: ImageRecord | null;
+  imageSrc: string;
   detailsOpen: boolean;
   imageControlsHidden: boolean;
   isPanning: boolean;
@@ -72,7 +73,7 @@ const handleImagePointerCancel = (event: PointerEvent) => {
   <figure class="image-canvas" :class="{ 'has-drawer': detailsOpen }" @click="emit('surface')">
     <img
       v-if="image"
-      :src="image.public_url"
+      :src="imageSrc"
       :alt="image.title"
       class="main-image"
       :class="{ 'is-panning': isPanning, 'is-zoomed': zoomScale > 1 }"

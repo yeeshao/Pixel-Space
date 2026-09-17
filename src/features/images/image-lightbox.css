@@ -183,6 +183,43 @@
   cursor: default;
 }
 
+
+.viewer-original-btn {
+  width: auto;
+  min-width: 36px;
+  padding: 0 10px;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.viewer-original-btn.is-active {
+  color: rgb(132, 247, 153);
+  background: rgba(132, 247, 153, 0.12);
+}
+
+.original-load-status {
+  position: absolute;
+  left: 50%;
+  bottom: 5.25rem;
+  z-index: 25;
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border: 1px solid rgba(53, 243, 255, 0.25);
+  border-radius: 7px;
+  background: rgba(7, 7, 19, 0.82);
+  color: rgb(165, 243, 252);
+  font-size: 12px;
+  line-height: 1.4;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.original-load-status.is-error {
+  border-color: rgba(251, 113, 133, 0.35);
+  color: rgb(253, 164, 175);
+}
 .image-ctrl-btn {
   display: inline-flex;
   align-items: center;
@@ -279,6 +316,22 @@
   .viewer-action-btn {
     width: 34px;
     height: 34px;
+  }
+
+  .viewer-original-btn {
+    width: auto;
+    min-width: 34px;
+    padding: 0 8px;
+  }
+
+  .viewer-original-btn span {
+    display: none;
+  }
+
+  .original-load-status {
+    bottom: 4.75rem;
+    max-width: calc(100vw - 32px);
+    text-align: center;
   }
   .viewer-esc-button {
     width: 34px;

@@ -8,6 +8,8 @@ defineProps<{
   copied: boolean;
   detailsOpen: boolean;
   originalUrl: string;
+  originalLoading: boolean;
+  originalLoaded: boolean;
   saving: boolean;
   deleting: boolean;
 }>();
@@ -17,6 +19,7 @@ const emit = defineEmits<{
   delete: [];
   share: [];
   toggleDetails: [];
+  loadOriginal: [];
 }>();
 </script>
 
@@ -53,6 +56,19 @@ const emit = defineEmits<{
         @click="emit('toggleDetails')"
       >
         <svg :viewBox="ICONS.info.vb" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path :d="ICONS.info.d" /></svg>
+      </button>
+      <button
+        v-if="image && isAdmin"
+        type="button"
+        class="viewer-action-btn viewer-original-btn"
+        :class="{ 'is-active': originalLoaded }"
+        :disabled="originalLoading || originalLoaded"
+        :title="originalLoaded ? '原图已加载' : '加载原图'"
+        :aria-label="originalLoaded ? '原图已加载' : '加载原图'"
+        @click="emit('loadOriginal')"
+      >
+        <svg :viewBox="ICONS.fileAlt.vb" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path :d="ICONS.fileAlt.d" /></svg>
+        <span>{{ originalLoading ? '加载中' : originalLoaded ? '原图' : '加载原图' }}</span>
       </button>
       <a
         v-if="image && isAdmin"
