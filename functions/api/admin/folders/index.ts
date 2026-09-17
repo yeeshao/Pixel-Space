@@ -82,7 +82,37 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/f
 
   try {
     const result = await env.DB.prepare(LIST_FOLDERS_SQL).all<FolderRecord>();
-    return json({ folders: result.results ?? [] });
+    const folders = result.results ?? [];
+
+    // 兼容 D1：不在 SQL 中做递归 CTE，避免部分 SQLite/D1 环境递归查询失败。
+    // 在 Worker 内存中递归汇总当前目录及所有子目录图片数量。
+    const children = new Map<string, FolderRecord[]>();
+    for (const folder of folders) {
+      if (folder.parent_id) {
+        const list = children.get(folder.parent_id) ?? [];
+        list.push(folder);
+        children.set(folder.parent_id, list);
+      }
+    }
+
+    const memo = new Map<string, number>();
+    const countImages = (folder: FolderRecord): number => {
+      const cached = memo.get(folder.id);
+      if (cached !== undefined) return cached;
+      let total = Number(folder.image_count ?? 0);
+      for (const child of children.get(folder.id) ?? []) {
+        total += countImages(child);
+      }
+      memo.set(folder.id, total);
+      return total;
+    };
+
+    return json({
+      folders: folders.map((folder) => ({
+        ...folder,
+        image_count: countImages(folder),
+      })),
+    });
   } catch (error) {
     logger.error('GET /api/admin/folders failed', { error });
     return serverError('folders_list_failed');
