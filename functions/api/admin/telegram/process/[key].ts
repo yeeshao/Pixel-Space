@@ -1,11 +1,18 @@
 import type { Env } from '../../../../types';
 import { resolveAdmin } from '../../../../_shared/auth';
 import { badRequest, json, notFound, serverError, unauthorized } from '../../../../_shared/http';
-import { IMAGE_SELECT_COLUMNS, type ImageRow, rowToAdminRecord } from '../../../../_shared/images';
+import { IMAGE_SELECT_COLUMNS, type ImageRow, rowToAdminRecord, normalizeTagsJson, normalizeColorPaletteJson } from '../../../../_shared/images';
 import { requireSameOrigin } from '../../../../_shared/security';
 import { withRequestLogging } from '../../../../_shared/logger';
 import { createImageKey, keyFromRouteParam } from '../../../../_shared/keys';
-import { coordinateOrNull, integerOrNull, numberOrNull, stringOrEmpty, stringOrNull, normalizeStringList, normalizeTagsJson, normalizeColorPaletteJson } from '../../../../_shared/request';
+import { coordinateOrNull, integerOrNull, numberOrNull, stringOrEmpty, stringOrNull, normalizeStringList } from '../../../../_shared/request';
+
+interface TelegramStagedImageRow extends ImageRow {
+  hash: string | null;
+  tg_file_id: string | null;
+  tg_message_id: number | null;
+  tg_chat_id: string | null;
+}
 
 const MAX_COMPRESSED_BYTES = 15 * 1024 * 1024;
 
@@ -59,7 +66,7 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
   const region = meta.location_region === 'china' || meta.location_region === 'global' ? meta.location_region : null;
 
   try {
-    const row = await env.DB.prepare(`SELECT * FROM images WHERE key = ?`).bind(key).first<ImageRow & { tg_file_id: string | null; tg_message_id: number | null; tg_chat_id: string | null; folder_id: string | null }>();
+    const row = await env.DB.prepare(`SELECT * FROM images WHERE key = ?`).bind(key).first<TelegramStagedImageRow>();
     if (!row) return notFound();
     if (row.tg_status !== 'staged') return badRequest('telegram_image_not_staged');
 
