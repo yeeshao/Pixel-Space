@@ -108,6 +108,7 @@ export const useUploadQueue = (options: UploadQueueOptions = {}) => {
     originalHash: null,
     compressedFile: null,
     compressedDimensions: null,
+    originalDimensions: null,
     aiPreviewFile: null,
     exif: emptyUploadExif(),
     meta: createUploadMeta(new File([], '')),
