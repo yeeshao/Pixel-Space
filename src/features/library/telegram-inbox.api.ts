@@ -59,3 +59,11 @@ export async function processTelegramImage(key: string, payload: TelegramProcess
   if (!response.ok) throw new Error(`Telegram 图片处理失败：${await readHttpError(response)}`);
   return (await response.json()) as ImageRecord;
 }
+
+
+export async function discardTelegramImage(key: string): Promise<void> {
+  const response = await fetch(`/api/admin/telegram/discard/${encodeURIComponent(key)}`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error(`Telegram 图片移出暂存区失败：${await readHttpError(response)}`);
+}
