@@ -56,7 +56,47 @@ const extensionFromDocument = (fileName: string | undefined, mimeType: string | 
   return 'jpg';
 };
 
-export const onRequestGet: PagesFunction<Env> = async () => json({ ok: true, service: 'pixel-space-telegram-webhook' });
+export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+  if (!env.TG_BOT_TOKEN) return serverError('telegram_not_configured');
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/getWebhookInfo`);
+    const data = await response.json() as {
+      ok?: boolean;
+      description?: string;
+      result?: {
+        url?: string;
+        has_custom_certificate?: boolean;
+        pending_update_count?: number;
+        ip_address?: string;
+        last_error_date?: number;
+        last_error_message?: string;
+        max_connections?: number;
+        allowed_updates?: string[];
+      };
+    };
+    if (!response.ok || !data.ok) {
+      return json({
+        ok: false,
+        service: 'pixel-space-telegram-webhook',
+        telegram_error: data.description || `HTTP ${response.status}`,
+      }, 502);
+    }
+    return json({
+      ok: true,
+      service: 'pixel-space-telegram-webhook',
+      webhook: {
+        url: data.result?.url || '',
+        pending_update_count: data.result?.pending_update_count ?? 0,
+        allowed_updates: data.result?.allowed_updates ?? [],
+        last_error_date: data.result?.last_error_date ?? null,
+        last_error_message: data.result?.last_error_message ?? null,
+        max_connections: data.result?.max_connections ?? null,
+      },
+    });
+  } catch (error) {
+    return serverError(error instanceof Error ? error.message : 'telegram_webhook_info_failed');
+  }
+};
 
 export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/telegram/webhook', async ({ request, env }, logger) => {
   if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return serverError('telegram_not_configured');
