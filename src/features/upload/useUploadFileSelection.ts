@@ -84,64 +84,40 @@ export const useUploadFileSelection = ({
     if (files.length > 0) addFiles(files);
   };
 
-  const openFilePicker = () => {
-    fileInputRef.value?.click();
-  };
+  type SystemFilePicker = (options?: {
+    multiple?: boolean;
+    types?: Array<{
+      description?: string;
+      accept: Record<string, string[]>;
+    }>;
+  }) => Promise<Array<{ getFile: () => Promise<File> }>>;
 
-  /**
-   * 在支持 File System Access API 的移动浏览器中打开系统文件选择器。
-   * 不支持时回退到普通 input[type=file]，避免影响原有上传流程。
-   */
-  const openSystemFilePicker = async () => {
-    const picker = (window as Window & {
-      showOpenFilePicker?: (options?: {
-        multiple?: boolean;
-        types?: Array<{
-          description?: string;
-          accept: Record<string, string[]>;
-        }>;
-        excludeAcceptAllOption?: boolean;
-      }) => Promise<Array<{ getFile: () => Promise<File> }>>;
-    }).showOpenFilePicker;
+  const openFilePicker = async () => {
+    const picker = (window as Window & { showOpenFilePicker?: SystemFilePicker }).showOpenFilePicker;
 
-    if (!picker) {
-      openFilePicker();
-      return;
-    }
-
-    try {
-      const handles = await picker({
-        multiple: true,
-        types: [
-          {
-            description: '图片',
-            accept: {
-              'image/*': [
-                '.jpg',
-                '.jpeg',
-                '.png',
-                '.webp',
-                '.gif',
-                '.avif',
-                '.heic',
-                '.heif',
-                '.bmp',
-                '.tif',
-                '.tiff',
-              ],
+    if (typeof picker === 'function') {
+      try {
+        const handles = await picker({
+          multiple: true,
+          types: [
+            {
+              description: '图片',
+              accept: {
+                'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.heic', '.heif', '.bmp', '.tif', '.tiff'],
+              },
             },
-          },
-        ],
-        excludeAcceptAllOption: false,
-      });
-
-      const files = await Promise.all(handles.map((handle) => handle.getFile()));
-      if (files.length > 0) addFiles(files);
-    } catch (error) {
-      // 用户主动取消选择时不提示；其它错误回退到原生 input。
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-      openFilePicker();
+          ],
+        });
+        const files = await Promise.all(handles.map((handle) => handle.getFile()));
+        if (files.length > 0) addFiles(files);
+        return;
+      } catch (error) {
+        if ((error as DOMException)?.name === 'AbortError') return;
+        // 某些移动浏览器虽然暴露了 API，但实际不支持图片类型筛选；回退到原生 input。
+      }
     }
+
+    fileInputRef.value?.click();
   };
 
   const selectEntry = (entryId: string) => {
@@ -180,7 +156,6 @@ export const useUploadFileSelection = ({
     handleInputChange,
     handleDrop,
     openFilePicker,
-    openSystemFilePicker,
     selectEntry,
     removeEntry,
     clearAll,
