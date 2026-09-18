@@ -12,49 +12,11 @@ const route = useRoute();
 const image = ref<ImageRecord | null>(null);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
-const origin = typeof window !== 'undefined' ? window.location.origin : '';
 const originalLoading = ref(false);
 const originalLoaded = ref(false);
 const originalError = ref<string | null>(null);
 const originalObjectUrl = ref<string | null>(null);
-
-const originalUrl = computed(() => image.value ? `/api/image/${encodeURIComponent(image.value.key)}/original` : '');
-const displayImageUrl = computed(() => originalObjectUrl.value || image.value?.public_url || '');
-
-const revokeOriginalObjectUrl = () => {
-  if (originalObjectUrl.value) {
-    URL.revokeObjectURL(originalObjectUrl.value);
-    originalObjectUrl.value = null;
-  }
-};
-
-const loadOriginal = async () => {
-  if (!image.value || originalLoading.value || originalLoaded.value) return;
-  originalLoading.value = true;
-  originalError.value = null;
-  try {
-    const response = await fetch(originalUrl.value, { credentials: 'same-origin', cache: 'no-store' });
-    if (!response.ok) {
-      let detail = '';
-      try {
-        const payload = await response.json() as { message?: string };
-        detail = payload.message ? `：${payload.message}` : '';
-      } catch { /* non-JSON error response */ }
-      throw new Error(`加载原图失败（${response.status}）${detail}`);
-    }
-    const blob = await response.blob();
-    if (!blob.size) throw new Error('原图为空');
-    revokeOriginalObjectUrl();
-    originalObjectUrl.value = URL.createObjectURL(blob);
-    originalLoaded.value = true;
-  } catch (error) {
-    originalError.value = error instanceof Error ? error.message : '加载原图失败';
-  } finally {
-    originalLoading.value = false;
-  }
-};
-
-onBeforeUnmount(revokeOriginalObjectUrl);
+const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
 const ensureMeta = (property: string, content: string) => {
   let meta = document.head.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
@@ -82,6 +44,43 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+});
+
+const originalUrl = computed(() => {
+  if (!image.value) return '';
+  return `/api/image/${encodeURIComponent(image.value.key)}/original`;
+});
+
+const loadOriginal = async () => {
+  if (!image.value || originalLoading.value || originalLoaded.value) return;
+  originalLoading.value = true;
+  originalError.value = null;
+  try {
+    const response = await fetch(originalUrl.value, { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const payload = await response.json() as { error?: string };
+        detail = payload.error ? `：${payload.error}` : '';
+      } catch {}
+      throw new Error(`加载原图失败（${response.status}）${detail}`);
+    }
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('原图为空');
+    if (originalObjectUrl.value) URL.revokeObjectURL(originalObjectUrl.value);
+    originalObjectUrl.value = URL.createObjectURL(blob);
+    originalLoaded.value = true;
+  } catch (error) {
+    originalError.value = error instanceof Error ? error.message : '加载原图失败';
+  } finally {
+    originalLoading.value = false;
+  }
+};
+
+const downloadOriginalUrl = computed(() => originalUrl.value ? `${originalUrl.value}?download=1` : '');
+
+onBeforeUnmount(() => {
+  if (originalObjectUrl.value) URL.revokeObjectURL(originalObjectUrl.value);
 });
 
 const exifRows = computed(() => {
@@ -133,36 +132,24 @@ const exifRows = computed(() => {
         <div class="public-image-layout">
           <figure class="public-image-preview cyber-panel">
             <img
-              :src="displayImageUrl"
+              :src="originalObjectUrl || image.public_url"
               :alt="image.title"
               class="public-image-img"
               :style="{ aspectRatio: `${image.width} / ${image.height}` }"
             />
+            <div class="public-image-actions">
+              <button type="button" class="public-image-action" :disabled="originalLoading || originalLoaded" @click="loadOriginal">
+                {{ originalLoading ? '正在加载原图…' : originalLoaded ? '原图已加载' : '加载原图' }}
+              </button>
+              <a v-if="downloadOriginalUrl" class="public-image-action" :href="downloadOriginalUrl" target="_blank" rel="noreferrer">下载原图</a>
+            </div>
+            <p v-if="originalError" class="public-image-error">{{ originalError }}</p>
           </figure>
 
           <aside class="public-image-info">
             <section class="public-info-card cyber-panel">
               <h1 class="text-2xl font-black text-white">{{ image.title }}</h1>
               <p v-if="image.caption" class="mt-3 text-sm leading-relaxed text-slate-300">{{ image.caption }}</p>
-              <div class="mt-5 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  class="rounded border border-neon-cyan/40 px-3 py-2 text-xs font-bold text-neon-cyan transition hover:bg-neon-cyan/10 disabled:cursor-not-allowed disabled:opacity-50"
-                  :disabled="originalLoading || originalLoaded"
-                  @click="loadOriginal"
-                >
-                  {{ originalLoading ? '原图加载中…' : originalLoaded ? '原图已加载' : '加载原图' }}
-                </button>
-                <a
-                  v-if="originalUrl"
-                  :href="originalUrl"
-                  class="rounded border border-white/20 px-3 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10"
-                  download
-                >
-                  下载原图
-                </a>
-              </div>
-              <p v-if="originalError" class="mt-2 text-xs text-rose-400">{{ originalError }}</p>
               <div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-400">
                 <span class="font-mono">{{ image.width }} × {{ image.height }} · {{ image.format.toUpperCase() }}</span>
                 <span v-if="image.location_name" class="font-mono">📍 {{ image.location_name }}</span>
@@ -201,6 +188,7 @@ const exifRows = computed(() => {
 }
 
 .public-image-preview {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,6 +256,42 @@ const exifRows = computed(() => {
 
 .public-exif-item dd.is-muted {
   color: rgba(148, 163, 184, 0.7);
+}
+
+.public-image-actions {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.public-image-action {
+  border: 1px solid rgba(53, 243, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(7, 7, 19, 0.86);
+  color: rgb(226, 232, 240);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.public-image-action:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.public-image-error {
+  position: absolute;
+  left: 1rem;
+  bottom: 4rem;
+  z-index: 2;
+  max-width: calc(100% - 2rem);
+  color: rgb(251, 113, 133);
+  font-size: 0.75rem;
 }
 
 @media (max-width: 900px) {
