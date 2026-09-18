@@ -88,6 +88,48 @@ export const useUploadFileSelection = ({
     fileInputRef.value?.click();
   };
 
+  // 在支持 File System Access API 的移动浏览器中打开系统“文件”选择器。
+  // 它与照片选择器是两条独立入口，可让用户从 DCIM、下载、其他文件夹等位置选择图片。
+  const openSystemFilePicker = async () => {
+    const picker = (window as Window & {
+      showOpenFilePicker?: (options?: {
+        multiple?: boolean;
+        types?: Array<{
+          description?: string;
+          accept: Record<string, string[]>;
+        }>;
+      }) => Promise<Array<FileSystemFileHandle>>;
+    }).showOpenFilePicker;
+
+    if (!picker) {
+      // Safari/iOS 等不支持时退回普通文件 input。
+      fileInputRef.value?.click();
+      return;
+    }
+
+    try {
+      const handles = await picker({
+        multiple: true,
+        types: [
+          {
+            description: '图片',
+            accept: {
+              'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.heic', '.heif', '.bmp', '.tif', '.tiff'],
+            },
+          },
+        ],
+      });
+      const files: File[] = [];
+      for (const handle of handles) files.push(await handle.getFile());
+      if (files.length > 0) addFiles(files);
+    } catch (error) {
+      // 用户主动取消选择时不提示错误。
+      if ((error as DOMException)?.name !== 'AbortError') {
+        globalError.value = `文件选择失败：${(error as Error).message}`;
+      }
+    }
+  };
+
   const selectEntry = (entryId: string) => {
     const entry = entries.value.find((item) => item.id === entryId) ?? null;
     if (!entry) return;
@@ -124,6 +166,7 @@ export const useUploadFileSelection = ({
     handleInputChange,
     handleDrop,
     openFilePicker,
+    openSystemFilePicker,
     selectEntry,
     removeEntry,
     clearAll,
