@@ -105,10 +105,13 @@ const {
 
 const {
   fileInputRef,
+  systemFileInputRef,
   releaseAllEntryPreviews,
   handleInputChange,
+  handleSystemFileInputChange,
   handleDrop,
   openFilePicker,
+  openSystemFile,
   selectEntry,
   removeEntry,
   clearAll,
@@ -143,6 +146,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="page-inner">
+        <!-- 系统照片选择器：保留 Android/iOS 的照片/影集入口 -->
         <input
           ref="fileInputRef"
           type="file"
@@ -150,6 +154,17 @@ onBeforeUnmount(() => {
           multiple
           class="sr-only"
           @change="handleInputChange"
+        />
+
+        <!-- 全文件系统选择器：用于访问照片选择器没有列出的目录/图片。
+             不限制 accept，由脚本只接收图片，避免 Android Chrome 强制进入受限照片选择器。 -->
+        <input
+          ref="systemFileInputRef"
+          type="file"
+          accept="*/*"
+          multiple
+          class="sr-only"
+          @change="handleSystemFileInputChange"
         />
 
         <UploadActionRow
@@ -166,6 +181,7 @@ onBeforeUnmount(() => {
           :is-batch-uploading="isBatchUploading"
           :ready-count="readyEntries.length"
           @open="openFilePicker"
+          @open-system-file="openSystemFile"
           @drop="handleDrop"
           @submit="submitUploadAll"
         />
