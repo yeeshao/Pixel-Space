@@ -85,90 +85,20 @@ export const useUploadFileSelection = ({
   };
 
   const openFilePicker = async () => {
-    // 支持 File System Access API 的移动浏览器优先使用系统文件选择器。
-    // 不支持时自动回退到项目原有的 <input type="file">。
-    const picker = (
-      window as Window & {
-        showOpenFilePicker?: (options?: {
-          multiple?: boolean;
-          excludeAcceptAllOption?: boolean;
-          types?: Array<{
-            description?: string;
-            accept: Record<string, string[]>;
-          }>;
-        }) => Promise<Array<{ getFile: () => Promise<File> }>>;
-      }
-    ).showOpenFilePicker;
+    const pickerWindow = window as Window & {
+      showOpenFilePicker?: (options?: {
+        multiple?: boolean;
+        excludeAcceptAllOption?: boolean;
+        types?: Array<{
+          description?: string;
+          accept: Record<string, string[]>;
+        }>;
+      }) => Promise<Array<{ getFile: () => Promise<File> }>>;
+    };
 
-    if (typeof picker === 'function') {
+    if (typeof pickerWindow.showOpenFilePicker === 'function') {
       try {
-        const handles = await picker({
-          multiple: true,
-          excludeAcceptAllOption: false,
-          types: [
-            {
-              description: '图片',
-              accept: {
-                'image/*': [
-                  '.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif',
-                  '.heic', '.heif', '.bmp', '.tif', '.tiff',
-                ],
-              },
-            },
-          ],
-        });
-        const files = await Promise.all(handles.map((handle) => handle.getFile()));
-        if (files.length > 0) addFiles(files);
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-      }
-    }
-
-    fileInputRef.value?.click();
-  };
-
-  const selectEntry = (entryId: string) => {
-    const entry = entries.value.find((item) => item.id === entryId) ?? null;
-    if (!entry) return;
-    if (currentEntryId.value === entryId) return;
-    currentEntryId.value = entryId;
-    void syncPickRegionFromEntry(entry);
-  };
-
-  const removeEntry = (entryId: string) => {
-    const index = entries.value.findIndex((entry) => entry.id === entryId);
-    if (index === -1) return;
-    const entry = entries.value[index];
-    releaseEntryPreview(entry);
-    entries.value.splice(index, 1);
-    if (currentEntryId.value !== entryId) return;
-    const nextEntry = entries.value[index] ?? entries.value[index - 1] ?? null;
-    currentEntryId.value = nextEntry?.id ?? null;
-    void syncPickRegionFromEntry(nextEntry);
-  };
-
-  const clearAll = () => {
-    releaseAllEntryPreviews();
-    entries.value = [];
-    currentEntryId.value = null;
-    void syncPickRegionFromEntry(null);
-    globalError.value = null;
-  };
-
-  return {
-    fileInputRef,
-    releaseEntryPreview,
-    releaseAllEntryPreviews,
-    addFiles,
-    handleInputChange,
-    handleDrop,
-    openFilePicker,
-    selectEntry,
-    removeEntry,
-    clearAll,
-  };
-};
+        const handles = await pickerWindow.showOpenFilePicker({
           multiple: true,
           excludeAcceptAllOption: false,
           types: [
@@ -196,13 +126,10 @@ export const useUploadFileSelection = ({
         if (files.length > 0) addFiles(files);
         return;
       } catch (error) {
-        // 用户取消选择时不要显示错误；其它情况退回传统 input。
         if (error instanceof DOMException && error.name === 'AbortError') return;
       }
     }
 
-    // Safari/iOS、旧版 Android 浏览器等不支持 File System Access API 时，
-    // 使用原生 <input type="file" accept="image/*" multiple>。
     fileInputRef.value?.click();
   };
 
@@ -242,74 +169,6 @@ export const useUploadFileSelection = ({
     handleInputChange,
     handleDrop,
     openFilePicker,
-    selectEntry,
-    removeEntry,
-    clearAll,
-  };
-};
-      return;
-    }
-
-    try {
-      const handles = await picker({
-        multiple: true,
-        types: [
-          {
-            description: '图片',
-            accept: {
-              'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.heic', '.heif', '.bmp', '.tif', '.tiff'],
-            },
-          },
-        ],
-      });
-      const files: File[] = [];
-      for (const handle of handles) files.push(await handle.getFile());
-      if (files.length > 0) addFiles(files);
-    } catch (error) {
-      // 用户主动取消选择时不提示错误。
-      if ((error as DOMException)?.name !== 'AbortError') {
-        globalError.value = `文件选择失败：${(error as Error).message}`;
-      }
-    }
-  };
-
-  const selectEntry = (entryId: string) => {
-    const entry = entries.value.find((item) => item.id === entryId) ?? null;
-    if (!entry) return;
-    if (currentEntryId.value === entryId) return;
-    currentEntryId.value = entryId;
-    void syncPickRegionFromEntry(entry);
-  };
-
-  const removeEntry = (entryId: string) => {
-    const index = entries.value.findIndex((entry) => entry.id === entryId);
-    if (index === -1) return;
-    const entry = entries.value[index];
-    releaseEntryPreview(entry);
-    entries.value.splice(index, 1);
-    if (currentEntryId.value !== entryId) return;
-    const nextEntry = entries.value[index] ?? entries.value[index - 1] ?? null;
-    currentEntryId.value = nextEntry?.id ?? null;
-    void syncPickRegionFromEntry(nextEntry);
-  };
-
-  const clearAll = () => {
-    releaseAllEntryPreviews();
-    entries.value = [];
-    currentEntryId.value = null;
-    void syncPickRegionFromEntry(null);
-    globalError.value = null;
-  };
-
-  return {
-    fileInputRef,
-    releaseEntryPreview,
-    releaseAllEntryPreviews,
-    addFiles,
-    handleInputChange,
-    handleDrop,
-    openFilePicker,
-    openSystemFilePicker,
     selectEntry,
     removeEntry,
     clearAll,
