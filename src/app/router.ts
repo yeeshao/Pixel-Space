@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import { isAdmin, refreshAdmin } from '@/shared/auth/useAdmin';
+import GalleryView from '@/features/images/GalleryView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -33,7 +34,7 @@ const router = createRouter({
     {
       path: '/images',
       name: 'gallery',
-      component: () => import('@/features/images/GalleryView.vue'),
+      component: GalleryView,
       meta: {
         title: '探索',
       },
