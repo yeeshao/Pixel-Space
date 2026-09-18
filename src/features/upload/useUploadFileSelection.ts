@@ -29,6 +29,7 @@ export const useUploadFileSelection = ({
   syncPickRegionFromEntry,
 }: UseUploadFileSelectionOptions) => {
   const fileInputRef = ref<HTMLInputElement | null>(null);
+  const systemFileInputRef = ref<HTMLInputElement | null>(null);
 
   const releaseEntryPreview = (entry: UploadEntry) => {
     if (entry.previewObjectUrl) {
@@ -79,6 +80,18 @@ export const useUploadFileSelection = ({
     input.value = '';
   };
 
+  const handleSystemFileInputChange = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const files = input.files ? Array.from(input.files) : [];
+    const imageFiles = files.filter((file) => file.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|avif|heic|heif|bmp|tiff?)$/i.test(file.name));
+    if (imageFiles.length === 0 && files.length > 0) {
+      globalError.value = '没有选择可用的图片文件';
+    } else if (imageFiles.length > 0) {
+      addFiles(imageFiles);
+    }
+    input.value = '';
+  };
+
   const handleDrop = (event: DragEvent) => {
     const files = event.dataTransfer?.files ? Array.from(event.dataTransfer.files) : [];
     if (files.length > 0) addFiles(files);
@@ -86,6 +99,27 @@ export const useUploadFileSelection = ({
 
   const openFilePicker = () => {
     fileInputRef.value?.click();
+  };
+
+  const openSystemFile = async () => {
+    type OpenFilePicker = (options?: {
+      multiple?: boolean;
+    }) => Promise<Array<{ getFile: () => Promise<File> }>>;
+
+    const picker = (window as Window & { showOpenFilePicker?: OpenFilePicker }).showOpenFilePicker;
+    if (picker) {
+      try {
+        const handles = await picker({ multiple: true });
+        const files = await Promise.all(handles.map((handle) => handle.getFile()));
+        addFiles(files);
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      }
+    }
+
+    // 不支持 File System Access API 的 Android/iOS 浏览器回退到系统“文件”选择器。
+    systemFileInputRef.value?.click();
   };
 
   const selectEntry = (entryId: string) => {
@@ -118,14 +152,18 @@ export const useUploadFileSelection = ({
 
   return {
     fileInputRef,
+    systemFileInputRef,
     releaseEntryPreview,
     releaseAllEntryPreviews,
     addFiles,
     handleInputChange,
+    handleSystemFileInputChange,
     handleDrop,
     openFilePicker,
+    openSystemFile,
     selectEntry,
     removeEntry,
     clearAll,
   };
 };
+
