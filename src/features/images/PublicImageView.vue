@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import type { ImageRecord } from './image.types';
 import { buildAbsoluteImageUrl } from './image-links';
@@ -13,6 +13,60 @@ const image = ref<ImageRecord | null>(null);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
 const origin = typeof window !== 'undefined' ? window.location.origin : '';
+const originalLoading = ref(false);
+const originalLoaded = ref(false);
+const originalError = ref<string | null>(null);
+const originalObjectUrl = ref<string | null>(null);
+
+const originalUrl = computed(() => {
+  if (!image.value) return '';
+  return `/api/image/${encodeURIComponent(image.value.key)}/original`;
+});
+
+const displayImageUrl = computed(() => originalObjectUrl.value || image.value?.public_url || '');
+
+const revokeOriginalObjectUrl = () => {
+  if (originalObjectUrl.value) {
+    URL.revokeObjectURL(originalObjectUrl.value);
+    originalObjectUrl.value = null;
+  }
+};
+
+const loadOriginal = async () => {
+  if (!image.value || originalLoading.value || originalLoaded.value) return;
+  originalLoading.value = true;
+  originalError.value = null;
+  try {
+    const response = await fetch(originalUrl.value, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const payload = await response.json() as { message?: string };
+        detail = payload.message ? `：${payload.message}` : '';
+      } catch {
+        // Ignore non-JSON error responses.
+      }
+      throw new Error(`加载原图失败（${response.status}）${detail}`);
+    }
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('原图为空');
+    const objectUrl = URL.createObjectURL(blob);
+    revokeOriginalObjectUrl();
+    originalObjectUrl.value = objectUrl;
+    originalLoaded.value = true;
+  } catch (error) {
+    originalError.value = error instanceof Error ? error.message : '加载原图失败';
+  } finally {
+    originalLoading.value = false;
+  }
+};
+
+onBeforeUnmount(() => {
+  revokeOriginalObjectUrl();
+});
 
 const ensureMeta = (property: string, content: string) => {
   let meta = document.head.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
@@ -91,7 +145,7 @@ const exifRows = computed(() => {
         <div class="public-image-layout">
           <figure class="public-image-preview cyber-panel">
             <img
-              :src="image.public_url"
+              :src="displayImageUrl"
               :alt="image.title"
               class="public-image-img"
               :style="{ aspectRatio: `${image.width} / ${image.height}` }"
@@ -102,8 +156,176 @@ const exifRows = computed(() => {
             <section class="public-info-card cyber-panel">
               <h1 class="text-2xl font-black text-white">{{ image.title }}</h1>
               <p v-if="image.caption" class="mt-3 text-sm leading-relaxed text-slate-300">{{ image.caption }}</p>
-              <div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-400">
-                <span class="font-mono">{{ image.width }} × {{ image.height }} · {{ image.format.toUpperCase() }}</span>
+              <div class="mt-4 flex flex-wrap items-center gap-2">
+                <span class="mr-auto text-xs text-slate-400 font-mono">{{ image.width }} × {{ image.height }} · {{ image.format.toUpperCase() }}</span>
+                <button
+                  type="button"
+                  class="public-image-action"
+                  :disabled="originalLoading || originalLoaded"
+                  @click="loadOriginal"
+                >
+                  {{ originalLoading ? '加载原图中…' : originalLoaded ? '原图已加载' : '加载原图' }}
+                </button>
+                <a
+                  :href="originalUrl"
+                  class="public-image-action"
+                  download
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  下载原图
+                </a>
+              </div>
+              <p v-if="originalError" class="mt-2 text-xs text-rose-400">{{ originalError }}</p>
+              <div v-if="image.location_name" class="mt-2 text-xs text-slate-400 font-mono">📍 {{ image.location_name }}</div>
+              <dl class="public-exif-grid">
+                <div v-for="row in exifRows" :key="row.label" class="public-exif-item">
+                  <dt>{{ row.label }}</dt>
+                  <dd :class="{ 'is-muted': row.muted }">{{ row.value }}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="public-info-card cyber-panel">
+              <p class="mb-4 text-xs font-bold uppercase tracking-[0.3em] text-neon-cyan">Location</p>
+              <ReadOnlyMap
+                :lat="image.location_public === 0 ? null : image.location_lat"
+                :lng="image.location_public === 0 ? null : image.location_lng"
+                :region="image.location_public === 0 ? null : image.location_region"
+                :label="image.location_name || image.title"
+              />
+            </section>
+          </aside>
+        </div>
+      </template>
+    </article>
+  </main>
+</template>
+
+<style scoped>
+.public-image-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 60rem) 24rem;
+  align-items: start;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.public-image-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: clamp(32rem, calc(100vh - 8rem), 48rem);
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.public-image-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: rgba(7, 7, 19, 0.72);
+}
+
+.public-image-info {
+  display: flex;
+  flex-direction: column;
+  height: clamp(32rem, calc(100vh - 8rem), 48rem);
+  gap: 1rem;
+}
+
+.public-info-card {
+  border-radius: 6px;
+  padding: 1.25rem;
+}
+
+.public-image-info > .public-info-card:first-child {
+  flex: 1 1 auto;
+}
+
+.public-image-info > .public-info-card:nth-child(2) {
+  flex: 0 0 auto;
+}
+
+.public-exif-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+  margin-top: 1rem;
+}
+
+.public-exif-item {
+  border: 1px solid rgba(53, 243, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(7, 7, 19, 0.46);
+  padding: 0.625rem 0.75rem;
+}
+
+.public-exif-item dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(103, 232, 249, 0.78);
+}
+
+.public-exif-item dd {
+  margin-top: 0.35rem;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 0.78rem;
+  color: rgb(226, 232, 240);
+}
+
+.public-exif-item dd.is-muted {
+  color: rgba(148, 163, 184, 0.7);
+}
+
+@media (max-width: 900px) {
+  .public-image-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .public-image-preview {
+    height: clamp(22rem, 72vh, 40rem);
+  }
+
+  .public-image-info {
+    height: auto;
+  }
+
+  .public-image-img {
+    height: 100%;
+  }
+}
+
+.public-image-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(53, 243, 255, 0.24);
+  border-radius: 5px;
+  background: rgba(53, 243, 255, 0.08);
+  color: rgb(165, 243, 252);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.public-image-action:hover:not(:disabled) {
+  background: rgba(53, 243, 255, 0.16);
+  color: white;
+}
+
+.public-image-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+</style>
                 <span v-if="image.location_name" class="font-mono">📍 {{ image.location_name }}</span>
               </div>
               <dl class="public-exif-grid">
