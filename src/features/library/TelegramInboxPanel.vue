@@ -92,8 +92,11 @@ const processOne = async (item: ImageRecord) => {
   processingKey.value = item.key;
   error.value = null;
   try {
-    // 这里从 Telegram 代理读取原图；直到此处都没有把原图保存到 R2。
-    const response = await fetch(item.public_url, { credentials: 'same-origin' });
+    // 获取 Telegram 原图直链，避免 Cloudflare Pages Function 代理大文件。
+    const urlResponse = await fetch(item.public_url, { credentials: 'same-origin' });
+    if (!urlResponse.ok) throw new Error(`读取 Telegram 原图地址失败：HTTP ${urlResponse.status}`);
+    const { url } = await urlResponse.json() as { url: string };
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`读取 Telegram 原图失败：HTTP ${response.status}`);
     const blob = await response.blob();
     const originalName = item.original_filename || `${item.key}.jpg`;
