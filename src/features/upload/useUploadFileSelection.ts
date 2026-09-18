@@ -84,27 +84,51 @@ export const useUploadFileSelection = ({
     if (files.length > 0) addFiles(files);
   };
 
-  type SystemFilePicker = (options?: {
-    multiple?: boolean;
-    types?: Array<{
-      description?: string;
-      accept: Record<string, string[]>;
-    }>;
-  }) => Promise<Array<{ getFile: () => Promise<File> }>>;
+  const openFilePicker = () => {
+    fileInputRef.value?.click();
+  };
 
-  const openFilePicker = async () => {
-    const picker = (window as Window & { showOpenFilePicker?: SystemFilePicker }).showOpenFilePicker;
+  const selectEntry = (entryId: string) => {
+    const entry = entries.value.find((item) => item.id === entryId) ?? null;
+    if (!entry) return;
+    if (currentEntryId.value === entryId) return;
+    currentEntryId.value = entryId;
+    void syncPickRegionFromEntry(entry);
+  };
 
-    if (typeof picker === 'function') {
-      try {
-        const handles = await picker({
-          multiple: true,
-          types: [
-            {
-              description: '图片',
-              accept: {
-                'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.heic', '.heif', '.bmp', '.tif', '.tiff'],
-              },
+  const removeEntry = (entryId: string) => {
+    const index = entries.value.findIndex((entry) => entry.id === entryId);
+    if (index === -1) return;
+    const entry = entries.value[index];
+    releaseEntryPreview(entry);
+    entries.value.splice(index, 1);
+    if (currentEntryId.value !== entryId) return;
+    const nextEntry = entries.value[index] ?? entries.value[index - 1] ?? null;
+    currentEntryId.value = nextEntry?.id ?? null;
+    void syncPickRegionFromEntry(nextEntry);
+  };
+
+  const clearAll = () => {
+    releaseAllEntryPreviews();
+    entries.value = [];
+    currentEntryId.value = null;
+    void syncPickRegionFromEntry(null);
+    globalError.value = null;
+  };
+
+  return {
+    fileInputRef,
+    releaseEntryPreview,
+    releaseAllEntryPreviews,
+    addFiles,
+    handleInputChange,
+    handleDrop,
+    openFilePicker,
+    selectEntry,
+    removeEntry,
+    clearAll,
+  };
+};
             },
           ],
         });
