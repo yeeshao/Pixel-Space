@@ -1,9 +1,9 @@
-import type { Env } from '../../../../types';
-import { resolveAdmin } from '../../../../_shared/auth';
-import { unauthorized, json, notFound, serverError } from '../../../../_shared/http';
-import { getTelegramFileUrl } from '../../../../_shared/telegram';
-import { keyFromRouteParam } from '../../../../_shared/keys';
-import { withRequestLogging } from '../../../../_shared/logger';
+import type { Env } from '../../../../../types';
+import { resolveAdmin } from '../../../../../_shared/auth';
+import { unauthorized, json, notFound, serverError } from '../../../../../_shared/http';
+import { getTelegramFileUrl } from '../../../../../_shared/telegram';
+import { keyFromRouteParam } from '../../../../../_shared/keys';
+import { withRequestLogging } from '../../../../../_shared/logger';
 
 export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/telegram/preview/:key', async ({ env, request, params }, logger) => {
   if (!(await resolveAdmin(request, env))) return unauthorized();
