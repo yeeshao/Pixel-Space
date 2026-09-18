@@ -21,6 +21,7 @@ const syncLocation = defineModel<boolean>('syncLocation', { required: true });
 
 const emit = defineEmits<{
   open: [];
+  openSystemFile: [];
   drop: [event: DragEvent];
   submit: [];
 }>();
@@ -40,9 +41,23 @@ const emit = defineEmits<{
         <svg viewBox="0 0 512 512" fill="currentColor"><path d="M288 109.3V352c0 17.7-14.3 32-32 32s-32-14.3-32-32V109.3l-73.4 73.4c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l128-128c12.5-12.5 32.8-12.5 45.3 0l128 128c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L288 109.3zM64 352H192c0 35.3 28.7 64 64 64s64-28.7 64-64H448c35.3 0 64 28.7 64 64v32c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V416c0-35.3 28.7-64 64-64z" /></svg>
       </span>
       <div class="drop-text">
-        <p class="drop-title">{{ hasEntries ? '继续添加更多图片' : '拖拽图片到此或点击选择（支持多选）' }}</p>
-        <p class="drop-hint">单张上限 50 MB，自动压缩为 WebP</p>
+        <p class="drop-title">{{ hasEntries ? '继续添加更多图片' : '选择手机照片（支持多选）' }}</p>
+        <p class="drop-hint">可在系统照片选择器中切换相册 · 单张上限 50 MB</p>
       </div>
+    </button>
+
+    <button
+      type="button"
+      class="system-file-button"
+      @click="emit('openSystemFile')"
+    >
+      <span class="system-file-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h5l2 2H18.5A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" />
+          <path d="M8 14h8M12 10v8" />
+        </svg>
+      </span>
+      <span>从手机文件/全部文件夹选择</span>
     </button>
 
     <div class="action-stack">
