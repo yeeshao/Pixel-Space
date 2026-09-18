@@ -81,6 +81,9 @@ const emit = defineEmits<{
       >
         <svg :viewBox="ICONS.download.vb" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path :d="ICONS.download.d" /></svg>
       </a>
+      <button v-else-if="isAdmin" type="button" class="viewer-action-btn" title="下载原图" aria-label="下载原图" disabled>
+        <svg :viewBox="ICONS.download.vb" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path :d="ICONS.download.d" /></svg>
+      </button>
       <button
         v-if="isAdmin"
         type="button"
