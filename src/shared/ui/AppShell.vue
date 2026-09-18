@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { devRole as currentDevRole, isAdmin, isDev, logoutAdmin, setDevRole } from '@/shared/auth/useAdmin';
 
 defineProps<{ fluid?: boolean }>();
@@ -59,6 +60,12 @@ const adminNavLinks: NavLink[] = [
   { to: '/library', label: '控制台', icon: 'sliders' },
 ];
 
+const router = useRouter();
+
+const navigateTo = (to: string) => {
+  void router.push(to);
+};
+
 const scrollY = ref(0);
 
 const isScrolled = computed(() => scrollY.value > 8);
@@ -87,10 +94,11 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll));
 
         <div class="ml-12 hidden flex-1 md:flex">
           <div class="flex items-center gap-2">
-            <RouterLink
+            <a
               v-for="link in navLinks"
               :key="link.to"
-              :to="link.to"
+              :href="link.to"
+              @click.prevent="navigateTo(link.to)"
               class="nav-item group relative flex items-center gap-2 overflow-hidden whitespace-nowrap rounded px-3.5 py-2 text-[0.8rem] font-semibold tracking-[0.025em] text-slate-200 transition-all duration-200 hover:-translate-y-px hover:text-white"
               active-class="is-active"
             >
@@ -98,7 +106,7 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll));
                 <path :d="ICONS[link.icon].d" />
               </svg>
               <span>{{ link.label }}</span>
-            </RouterLink>
+            </a>
             <template v-if="isAdmin">
               <span class="mx-1 hidden h-4 w-px bg-neon-cyan/25 lg:inline-block" aria-hidden="true" />
               <RouterLink
@@ -194,10 +202,11 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll));
     </header>
 
     <nav class="mobile-tabbar md:hidden" aria-label="移动端主导航">
-      <RouterLink
+      <a
         v-for="link in navLinks"
         :key="link.to"
-        :to="link.to"
+        :href="link.to"
+        @click.prevent="navigateTo(link.to)"
         class="mobile-tab-link"
         active-class="is-active"
       >
@@ -205,7 +214,7 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll));
           <path :d="ICONS[link.icon].d" />
         </svg>
         <span class="mobile-tab-label">{{ link.label }}</span>
-      </RouterLink>
+      </a>
       <template v-if="isAdmin">
         <RouterLink
           v-for="link in adminNavLinks"
