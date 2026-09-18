@@ -84,53 +84,64 @@ export const useUploadFileSelection = ({
     if (files.length > 0) addFiles(files);
   };
 
-  const openFilePicker = async () => {
-    const pickerWindow = window as Window & {
+  const openFilePicker = () => {
+    fileInputRef.value?.click();
+  };
+
+  /**
+   * 在支持 File System Access API 的移动浏览器中打开系统文件选择器。
+   * 不支持时回退到普通 input[type=file]，避免影响原有上传流程。
+   */
+  const openSystemFilePicker = async () => {
+    const picker = (window as Window & {
       showOpenFilePicker?: (options?: {
         multiple?: boolean;
-        excludeAcceptAllOption?: boolean;
         types?: Array<{
           description?: string;
           accept: Record<string, string[]>;
         }>;
+        excludeAcceptAllOption?: boolean;
       }) => Promise<Array<{ getFile: () => Promise<File> }>>;
-    };
+    }).showOpenFilePicker;
 
-    if (typeof pickerWindow.showOpenFilePicker === 'function') {
-      try {
-        const handles = await pickerWindow.showOpenFilePicker({
-          multiple: true,
-          excludeAcceptAllOption: false,
-          types: [
-            {
-              description: '图片',
-              accept: {
-                'image/*': [
-                  '.jpg',
-                  '.jpeg',
-                  '.png',
-                  '.webp',
-                  '.gif',
-                  '.avif',
-                  '.heic',
-                  '.heif',
-                  '.bmp',
-                  '.tif',
-                  '.tiff',
-                ],
-              },
-            },
-          ],
-        });
-        const files = await Promise.all(handles.map((handle) => handle.getFile()));
-        if (files.length > 0) addFiles(files);
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-      }
+    if (!picker) {
+      openFilePicker();
+      return;
     }
 
-    fileInputRef.value?.click();
+    try {
+      const handles = await picker({
+        multiple: true,
+        types: [
+          {
+            description: '图片',
+            accept: {
+              'image/*': [
+                '.jpg',
+                '.jpeg',
+                '.png',
+                '.webp',
+                '.gif',
+                '.avif',
+                '.heic',
+                '.heif',
+                '.bmp',
+                '.tif',
+                '.tiff',
+              ],
+            },
+          },
+        ],
+        excludeAcceptAllOption: false,
+      });
+
+      const files = await Promise.all(handles.map((handle) => handle.getFile()));
+      if (files.length > 0) addFiles(files);
+    } catch (error) {
+      // 用户主动取消选择时不提示；其它错误回退到原生 input。
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      openFilePicker();
+    }
   };
 
   const selectEntry = (entryId: string) => {
@@ -169,6 +180,7 @@ export const useUploadFileSelection = ({
     handleInputChange,
     handleDrop,
     openFilePicker,
+    openSystemFilePicker,
     selectEntry,
     removeEntry,
     clearAll,
