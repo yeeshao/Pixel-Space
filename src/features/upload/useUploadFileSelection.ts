@@ -84,26 +84,104 @@ export const useUploadFileSelection = ({
     if (files.length > 0) addFiles(files);
   };
 
-  const openFilePicker = () => {
+  const openFilePicker = async () => {
+    // 优先使用浏览器的 File System Access API。
+    // 在支持的移动端浏览器中，这会进入系统文件/照片选择器，
+    // 用户可以切换到设备上的其它图片目录，而不是被网页自定义列表限制。
+    const picker = (
+      window as Window & {
+        showOpenFilePicker?: (options?: {
+          multiple?: boolean;
+          types?: Array<{
+            description?: string;
+            accept: Record<string, string[]>;
+          }>;
+          excludeAcceptAllOption?: boolean;
+        }) => Promise<Array<{ getFile: () => Promise<File> }>>;
+      }
+    ).showOpenFilePicker;
+
+    if (typeof picker === 'function') {
+      try {
+        const handles = await picker({
+          multiple: true,
+          excludeAcceptAllOption: false,
+          types: [
+            {
+              description: '图片',
+              accept: {
+                'image/*': [
+                  '.jpg',
+                  '.jpeg',
+                  '.png',
+                  '.webp',
+                  '.gif',
+                  '.avif',
+                  '.heic',
+                  '.heif',
+                  '.bmp',
+                  '.tif',
+                  '.tiff',
+                ],
+              },
+            },
+          ],
+        });
+        const files = await Promise.all(handles.map((handle) => handle.getFile()));
+        if (files.length > 0) addFiles(files);
+        return;
+      } catch (error) {
+        // 用户取消选择时不要显示错误；其它情况退回传统 input。
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      }
+    }
+
+    // Safari/iOS、旧版 Android 浏览器等不支持 File System Access API 时，
+    // 使用原生 <input type="file" accept="image/*" multiple>。
     fileInputRef.value?.click();
   };
 
-  // 在支持 File System Access API 的移动浏览器中打开系统“文件”选择器。
-  // 它与照片选择器是两条独立入口，可让用户从 DCIM、下载、其他文件夹等位置选择图片。
-  const openSystemFilePicker = async () => {
-    const picker = (window as Window & {
-      showOpenFilePicker?: (options?: {
-        multiple?: boolean;
-        types?: Array<{
-          description?: string;
-          accept: Record<string, string[]>;
-        }>;
-      }) => Promise<Array<FileSystemFileHandle>>;
-    }).showOpenFilePicker;
+  const selectEntry = (entryId: string) => {
+    const entry = entries.value.find((item) => item.id === entryId) ?? null;
+    if (!entry) return;
+    if (currentEntryId.value === entryId) return;
+    currentEntryId.value = entryId;
+    void syncPickRegionFromEntry(entry);
+  };
 
-    if (!picker) {
-      // Safari/iOS 等不支持时退回普通文件 input。
-      fileInputRef.value?.click();
+  const removeEntry = (entryId: string) => {
+    const index = entries.value.findIndex((entry) => entry.id === entryId);
+    if (index === -1) return;
+    const entry = entries.value[index];
+    releaseEntryPreview(entry);
+    entries.value.splice(index, 1);
+    if (currentEntryId.value !== entryId) return;
+    const nextEntry = entries.value[index] ?? entries.value[index - 1] ?? null;
+    currentEntryId.value = nextEntry?.id ?? null;
+    void syncPickRegionFromEntry(nextEntry);
+  };
+
+  const clearAll = () => {
+    releaseAllEntryPreviews();
+    entries.value = [];
+    currentEntryId.value = null;
+    void syncPickRegionFromEntry(null);
+    globalError.value = null;
+  };
+
+  return {
+    fileInputRef,
+    releaseEntryPreview,
+    releaseAllEntryPreviews,
+    addFiles,
+    handleInputChange,
+    handleDrop,
+    openFilePicker,
+    selectEntry,
+    removeEntry,
+    clearAll,
+  };
+};
       return;
     }
 
