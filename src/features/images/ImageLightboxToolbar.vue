@@ -58,7 +58,7 @@ const emit = defineEmits<{
         <svg :viewBox="ICONS.info.vb" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path :d="ICONS.info.d" /></svg>
       </button>
       <button
-        v-if="image && isAdmin"
+        v-if="image"
         type="button"
         class="viewer-action-btn viewer-original-btn"
         :class="{ 'is-active': originalLoaded }"
@@ -71,7 +71,7 @@ const emit = defineEmits<{
         <span>{{ originalLoading ? '加载中' : originalLoaded ? '原图' : '加载原图' }}</span>
       </button>
       <a
-        v-if="image && isAdmin"
+        v-if="image"
         class="viewer-action-btn"
         :href="originalUrl"
         target="_blank"
