@@ -129,6 +129,31 @@ export const useUploadFileSelection = ({
     clearAll,
   };
 };
+    currentEntryId.value = nextEntry?.id ?? null;
+    void syncPickRegionFromEntry(nextEntry);
+  };
+
+  const clearAll = () => {
+    releaseAllEntryPreviews();
+    entries.value = [];
+    currentEntryId.value = null;
+    void syncPickRegionFromEntry(null);
+    globalError.value = null;
+  };
+
+  return {
+    fileInputRef,
+    releaseEntryPreview,
+    releaseAllEntryPreviews,
+    addFiles,
+    handleInputChange,
+    handleDrop,
+    openFilePicker,
+    selectEntry,
+    removeEntry,
+    clearAll,
+  };
+};
             },
           ],
         });
