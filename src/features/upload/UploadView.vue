@@ -109,6 +109,126 @@ const {
   handleInputChange,
   handleDrop,
   openFilePicker,
+  openSystemFilePicker,
+  selectEntry,
+  removeEntry,
+  clearAll,
+} = useUploadFileSelection({
+  entries,
+  currentEntryId,
+  globalError,
+  createEntry,
+  enqueueProcess,
+  syncPickRegionFromEntry,
+});
+
+watch(currentEntryId, syncCurrentEntryMap);
+
+onMounted(() => {
+  void mountMap();
+  void loadFolders();
+});
+
+onBeforeUnmount(() => {
+  releaseAllEntryPreviews();
+  destroyMap();
+});
+</script>
+
+<template>
+  <AppShell fluid>
+    <section class="upload-page">
+      <div aria-hidden="true" class="orbs">
+        <div class="orb orb-cyan" />
+        <div class="orb orb-pink" />
+      </div>
+
+      <div class="page-inner">
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.heic,.heif,.bmp,.tif,.tiff"
+          multiple
+          class="sr-only"
+          @change="handleInputChange"
+        />
+
+        <UploadActionRow
+          v-model:batch-folder-id="batchFolderId"
+          v-model:sync-location="syncLocation"
+          :has-entries="hasEntries"
+          :folders="folders"
+          :status-variant="statusVariant"
+          :status-label="statusLabel"
+          :task-progress-value="taskProgressValue"
+          :task-progress-max="taskProgressMax"
+          :task-progress-status="taskProgressStatus"
+          :can-submit="canSubmit"
+          :is-batch-uploading="isBatchUploading"
+          :ready-count="readyEntries.length"
+          @open="openFilePicker"
+          @open-system-file="openSystemFilePicker"
+          @drop="handleDrop"
+          @submit="submitUploadAll"
+        />
+
+        <div
+          v-if="globalError"
+          class="error-banner"
+          role="alert"
+        >
+          <span aria-hidden="true" class="error-icon">!</span>
+          <span>{{ globalError }}</span>
+        </div>
+
+        <div class="workbench">
+          <UploadQueueRail
+            :entries="entries"
+            :current-entry-id="currentEntryId"
+            :queue-count-label="queueCountLabel"
+            :has-entries="hasEntries"
+            :is-batch-uploading="isBatchUploading"
+            @add="openFilePicker"
+            @clear="clearAll"
+            @remove="removeEntry"
+            @select="selectEntry"
+          />
+
+          <UploadPreviewStage
+            :current-entry="currentEntry"
+            @retry-upload="retryUploadForCurrent"
+            @retry-archive="retryArchiveForCurrent"
+          />
+
+          <UploadMetaSidebar
+            :current-entry="currentEntry"
+            :display-entry="displayEntry"
+            :display-file-name="displayFileName"
+            :has-current="hasCurrent"
+            :map-load-state="mapLoadState"
+            :pick-region="pickRegion"
+            @map-element="setMapElement"
+            @trigger-ai="triggerAiForCurrent"
+            @set-is-public="setIsPublic"
+            @set-location-public="setLocationPublic"
+            @clear-location="clearLocation"
+            @apply-location-search-result="applyLocationSearchResult"
+            @search-region-change="onSearchRegionChange"
+            @update-lat="updateLat"
+            @update-lng="updateLng"
+          />
+        </div>
+      </div>
+    </section>
+  </AppShell>
+</template>
+
+<style scoped src="./upload-view.css"></style>
+  fileInputRef,
+  releaseAllEntryPreviews,
+  handleInputChange,
+  handleDrop,
+  openFilePicker,
   selectEntry,
   removeEntry,
   clearAll,
