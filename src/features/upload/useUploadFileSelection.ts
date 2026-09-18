@@ -85,18 +85,17 @@ export const useUploadFileSelection = ({
   };
 
   const openFilePicker = async () => {
-    // 优先使用浏览器的 File System Access API。
-    // 在支持的移动端浏览器中，这会进入系统文件/照片选择器，
-    // 用户可以切换到设备上的其它图片目录，而不是被网页自定义列表限制。
+    // 支持 File System Access API 的移动浏览器优先使用系统文件选择器。
+    // 不支持时自动回退到项目原有的 <input type="file">。
     const picker = (
       window as Window & {
         showOpenFilePicker?: (options?: {
           multiple?: boolean;
+          excludeAcceptAllOption?: boolean;
           types?: Array<{
             description?: string;
             accept: Record<string, string[]>;
           }>;
-          excludeAcceptAllOption?: boolean;
         }) => Promise<Array<{ getFile: () => Promise<File> }>>;
       }
     ).showOpenFilePicker;
@@ -104,6 +103,72 @@ export const useUploadFileSelection = ({
     if (typeof picker === 'function') {
       try {
         const handles = await picker({
+          multiple: true,
+          excludeAcceptAllOption: false,
+          types: [
+            {
+              description: '图片',
+              accept: {
+                'image/*': [
+                  '.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif',
+                  '.heic', '.heif', '.bmp', '.tif', '.tiff',
+                ],
+              },
+            },
+          ],
+        });
+        const files = await Promise.all(handles.map((handle) => handle.getFile()));
+        if (files.length > 0) addFiles(files);
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      }
+    }
+
+    fileInputRef.value?.click();
+  };
+
+  const selectEntry = (entryId: string) => {
+    const entry = entries.value.find((item) => item.id === entryId) ?? null;
+    if (!entry) return;
+    if (currentEntryId.value === entryId) return;
+    currentEntryId.value = entryId;
+    void syncPickRegionFromEntry(entry);
+  };
+
+  const removeEntry = (entryId: string) => {
+    const index = entries.value.findIndex((entry) => entry.id === entryId);
+    if (index === -1) return;
+    const entry = entries.value[index];
+    releaseEntryPreview(entry);
+    entries.value.splice(index, 1);
+    if (currentEntryId.value !== entryId) return;
+    const nextEntry = entries.value[index] ?? entries.value[index - 1] ?? null;
+    currentEntryId.value = nextEntry?.id ?? null;
+    void syncPickRegionFromEntry(nextEntry);
+  };
+
+  const clearAll = () => {
+    releaseAllEntryPreviews();
+    entries.value = [];
+    currentEntryId.value = null;
+    void syncPickRegionFromEntry(null);
+    globalError.value = null;
+  };
+
+  return {
+    fileInputRef,
+    releaseEntryPreview,
+    releaseAllEntryPreviews,
+    addFiles,
+    handleInputChange,
+    handleDrop,
+    openFilePicker,
+    selectEntry,
+    removeEntry,
+    clearAll,
+  };
+};
           multiple: true,
           excludeAcceptAllOption: false,
           types: [
