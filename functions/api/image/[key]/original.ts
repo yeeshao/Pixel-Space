@@ -5,14 +5,18 @@ import { keyFromRouteParam } from '../../../_shared/keys';
 import { isFolderPublic } from '../../../_shared/folders';
 import { streamTelegramOriginal, type OriginalImageRow } from '../../../_shared/original';
 
-const ORIGINAL_SQL = 'SELECT key, original_filename, tg_file_id, tg_status, tg_error, is_public, folder_id FROM images WHERE key = ?';
-
 interface PublicOriginalRow extends OriginalImageRow {
   tg_status?: string | null;
   tg_error?: string | null;
   is_public: number;
-  folder_id: string;
+  folder_id: string | null;
 }
+
+const ORIGINAL_SQL = `
+  SELECT key, original_filename, tg_file_id, tg_status, tg_error, is_public, folder_id
+  FROM images
+  WHERE key = ?
+`;
 
 export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/image/:key/original', async ({ env, params }, logger) => {
   const key = keyFromRouteParam(params.key);
@@ -32,7 +36,10 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/image/:
         tg_error: row.tg_error ?? null,
       }), {
         status: 404,
-        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        },
       });
     }
 
