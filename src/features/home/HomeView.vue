@@ -4,6 +4,7 @@ import AppShell from '@/shared/ui/AppShell.vue';
 import type { ImageRecord } from '@/features/images/image.types';
 import { formatBytes } from '@/features/images/image-meta';
 import { fetchJson } from '@/shared/api/http';
+import { useRouter } from 'vue-router';
 
 interface StatsResponse {
   photos: number;
@@ -11,6 +12,12 @@ interface StatsResponse {
   places: number;
   latest: ImageRecord[];
 }
+
+const router = useRouter();
+
+const goExplore = () => {
+  void router.push({ name: 'gallery' });
+};
 
 const stats = ref<StatsResponse | null>(null);
 const loadError = ref<string | null>(null);
@@ -61,7 +68,7 @@ onMounted(async () => {
         </p>
 
         <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <RouterLink to="/images" class="hero-cta cta-primary">
+          <a href="/images" class="hero-cta cta-primary" @click.prevent="goExplore">
             <span class="cta-glow" aria-hidden="true"></span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cta-icon" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />
@@ -72,7 +79,7 @@ onMounted(async () => {
               <path d="M5 12h14" />
               <path d="m12 5 7 7-7 7" />
             </svg>
-          </RouterLink>
+          </a>
 
           <RouterLink to="/upload" class="hero-cta cta-secondary">
             <span class="cta-glow" aria-hidden="true"></span>
@@ -597,3 +604,4 @@ onMounted(async () => {
   color: rgba(148, 163, 184, 0.9);
 }
 </style>
+
