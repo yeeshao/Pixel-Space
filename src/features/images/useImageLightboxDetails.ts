@@ -112,23 +112,3 @@ export const useImageLightboxDetails = ({
     mapRegion,
   };
 };
-    formatExifTakenAt,
-    formatImageTimestamp,
-    exifRows,
-    aiTags,
-    aiPalette,
-    dominantColor,
-    hasCoordinates,
-    mapLat,
-    mapLng,
-    mapRegion,
-  };
-};
-    aiPalette,
-    dominantColor,
-    hasCoordinates,
-    mapLat,
-    mapLng,
-    mapRegion,
-  };
-};
