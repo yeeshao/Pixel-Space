@@ -13,7 +13,7 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/t
 
     const records = (result.results ?? []).map((row) => ({
       ...rowToAdminRecord(row),
-      // 暂存图片不在 R2，浏览器通过这个受保护的代理从 Telegram 读取。
+      // 暂存图片不在 R2，浏览器直接读取 Telegram 文件地址，避免 Worker 代理大文件。
       public_url: `/api/admin/telegram/preview/${encodeURIComponent(row.key)}`,
     }));
 
