@@ -19,7 +19,7 @@ interface UseImageLightboxDetailsOptions {
   editForm: ImageLightboxEditForm;
 }
 
-export const originalImageUrl = (image: ImageRecord) => `/api/admin/original/${encodeURIComponent(image.key)}`;
+export const originalImageUrl = (image: ImageRecord) => `/api/image/${encodeURIComponent(image.key)}/original`;
 
 export const useImageLightboxDetails = ({
   image,
