@@ -8,6 +8,7 @@ import { requireSameOrigin } from '../../../_shared/security';
 import { withRequestLogging } from '../../../_shared/logger';
 
 const MAX_LOCATION_BATCH = 200;
+const MAX_VISIBILITY_BATCH = 200;
 const MAX_AI_BATCH = 1;
 
 export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/images/batch', async ({ request, env }, logger) => {
@@ -16,8 +17,9 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
   if (!(await resolveAdmin(request, env))) return unauthorized();
   const raw = await parseJsonObject(request);
   if (!raw) return badRequest('invalid_batch_payload');
-  const action = raw.action === 'location' || raw.action === 'ai' ? raw.action : null;
-  const keys = normalizeStringList(raw.keys, { min: 1, max: action === 'ai' ? MAX_AI_BATCH : MAX_LOCATION_BATCH });
+  const action = raw.action === 'location' || raw.action === 'visibility' || raw.action === 'ai' ? raw.action : null;
+  const maxKeys = action === 'ai' ? MAX_AI_BATCH : action === 'visibility' ? MAX_VISIBILITY_BATCH : MAX_LOCATION_BATCH;
+  const keys = normalizeStringList(raw.keys, { min: 1, max: maxKeys });
   if (!action || !keys) return badRequest('invalid_batch_payload');
 
   try {
@@ -31,6 +33,22 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
       await env.DB.prepare(`UPDATE images SET location_name=?, location_lat=?, location_lng=?, location_region=?, updated_at=datetime('now') WHERE key IN (${placeholders})`).bind(name, lat, lng, region, ...keys).run();
       const rows = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key IN (${placeholders})`).bind(...keys).all<ImageRow>();
       return json({ ok: true, action, processed: rows.results?.length ?? 0, items: (rows.results ?? []).map(rowToAdminRecord) });
+    }
+
+    if (action === 'visibility') {
+      const isPublic = raw.is_public === 0 || raw.is_public === 1 ? raw.is_public : null;
+      if (isPublic === null) return badRequest('invalid_visibility_payload');
+      const placeholders = keys.map(() => '?').join(',');
+      await env.DB.prepare(
+        `UPDATE images SET is_public=?, updated_at=datetime('now') WHERE key IN (${placeholders})`,
+      ).bind(isPublic, ...keys).run();
+      const rows = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key IN (${placeholders})`).bind(...keys).all<ImageRow>();
+      return json({
+        ok: true,
+        action,
+        processed: rows.results?.length ?? 0,
+        items: (rows.results ?? []).map(rowToAdminRecord),
+      });
     }
 
     const updated: ImageRow[] = [];
