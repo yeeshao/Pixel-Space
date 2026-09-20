@@ -1762,3 +1762,60 @@
   }
 }
 
+
+
+/* ===== 修复方格模式：勾选框与文件夹图标重叠 =====
+   方格卡片顶部保留独立的“操作区”，勾选框和公开/私有状态在顶部，
+   文件夹图标从下一行开始，不再被两个按钮遮挡。
+*/
+.folders-panel .folder-grid--grid .folder-card {
+  position: relative;
+}
+
+.folders-panel .folder-grid--grid .folder-select-check {
+  position: absolute !important;
+  top: .65rem !important;
+  left: .65rem !important;
+  z-index: 6 !important;
+}
+
+.folders-panel .folder-grid--grid .folder-icon {
+  position: relative;
+  z-index: 1;
+}
+
+/* 手机/窄屏方格模式：图标必须从顶部操作区下面开始 */
+@media (max-width: 768px) {
+  .folders-panel .folder-grid--grid .folder-card {
+    grid-template-columns: 1fr !important;
+    padding-top: 3.05rem !important;
+    min-height: 9.8rem !important;
+    align-content: start !important;
+  }
+
+  .folders-panel .folder-grid--grid .folder-icon {
+    margin-top: 0 !important;
+  }
+
+  .folders-panel .folder-grid--grid .folder-body {
+    min-width: 0;
+  }
+
+  .folders-panel .folder-grid--grid .folder-select-check {
+    top: .65rem !important;
+    left: .65rem !important;
+  }
+
+  .folders-panel .folder-grid--grid .folder-visibility {
+    top: .65rem !important;
+    right: .65rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .folders-panel .folder-grid--grid .folder-card {
+    padding-top: 3.05rem !important;
+    min-height: 9.8rem !important;
+  }
+}
+
