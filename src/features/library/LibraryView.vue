@@ -119,7 +119,6 @@ const removeImage = (key: string) => {
 
 onMounted(refreshAll);
 
-let syncingFolderHistory = false;
 
 const folderHistoryState = (folderId: string | null) => ({
   pixelSpaceLibraryFolder: folderId,
@@ -255,4 +254,3 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped src="./library-view.css"></style>
-
