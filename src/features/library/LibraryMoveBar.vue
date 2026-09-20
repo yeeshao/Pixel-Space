@@ -15,6 +15,7 @@ const emit = defineEmits<{
   move: [];
   batchLocation: [];
   batchAi: [];
+  batchVisibility: [];
   openGrant: [];
 }>();
 </script>
@@ -41,6 +42,7 @@ const emit = defineEmits<{
       <button type="button" class="library-btn primary" @click="emit('move')">移动</button>
       <button type="button" class="library-btn primary" @click="emit('batchLocation')">批量位置</button>
       <button type="button" class="library-btn primary" @click="emit('batchAi')">批量 AI</button>
+      <button type="button" class="library-btn primary" title="全部公开时设为私有，否则设为公开" @click="emit('batchVisibility')">公开/私有</button>
       <button type="button" class="library-btn danger" @click="emit('delete')">删除</button>
       <button type="button" class="library-btn ghost" @click="emit('cancel')">取消</button>
     </div>
