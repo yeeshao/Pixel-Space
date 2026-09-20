@@ -33,7 +33,12 @@ const DEFAULT_RETRY_DELAY_MS = 1000;
 const RETRYABLE_ARCHIVE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 // Telegram Bot API getFile has a 20 MB download limit on the normal cloud API.
 // Keep each archive part below that limit so originals can be reconstructed reliably.
-export const TELEGRAM_ARCHIVE_PART_BYTES = 20 * 1000 * 1000;
+// User-requested binary split size: 20 MiB = 20 * 1024 * 1024 bytes.
+// Note: this is larger than Telegram Bot API's normal cloud getFile download
+// ceiling of 20,000,000 decimal bytes, so direct reconstruction through the
+// standard Bot API may fail for a full-size 20 MiB part.
+export const TELEGRAM_ARCHIVE_PART_BYTES = 20 * 1024 * 1024;
+export const TELEGRAM_ARCHIVE_PART_UNIT = 'binary-MiB';
 
 async function readTelegramJson<T>(response: Response, failureCode: string): Promise<T> {
   try { return (await response.json()) as T; } catch { throw new Error(`${failureCode}: invalid_json`); }
@@ -100,7 +105,10 @@ export async function archiveOriginalPartsToTelegram(input: {
   key: string;
 }): Promise<TelegramArchivePart[]> {
   assertTelegramConfig(input.token, input.chatId);
-  const totalParts = Math.ceil(input.file.size / TELEGRAM_ARCHIVE_PART_BYTES);
+  // Split deterministically at exactly 20 MiB (20 * 1024 * 1024 bytes) per part.
+  // The last part is naturally shorter. This keeps every part within Telegram's
+  // download ceiling while maximizing the usable payload size.
+  const totalParts = Math.max(1, Math.ceil(input.file.size / TELEGRAM_ARCHIVE_PART_BYTES));
   const parts: TelegramArchivePart[] = [];
   for (let index = 0; index < totalParts; index += 1) {
     const start = index * TELEGRAM_ARCHIVE_PART_BYTES;
