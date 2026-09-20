@@ -37,7 +37,7 @@ onMounted(load);
 </script>
 
 <template>
-  <section class="mt-6 rounded-xl border border-white/10 bg-black/20 p-4 backdrop-blur">
+  <section class=" rounded-xl border border-white/10 bg-black/20 p-4 backdrop-blur">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <div>
         <div class="text-sm font-semibold text-white">访问与下载统计</div>
