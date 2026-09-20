@@ -1819,3 +1819,80 @@
   }
 }
 
+
+
+/* ===== 控制台新版信息顺序与层级 =====
+   顺序由 LibraryView 结构控制：
+   当前文件路径 → 文件夹管理 → 实际文件夹 → 图片统计 → 照片
+   → 智能目录 → AI 配置 → Telegram 暂存 → 访问与下载统计
+*/
+.library-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.library-page > .content-panel,
+.library-page > .image-stats-panel,
+.library-page > .dashboard-extras-panel,
+.library-page > .analytics-panel {
+  width: 100%;
+}
+.dashboard-extras-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.dashboard-extras-panel .dashboard-ai-panel,
+.dashboard-extras-panel .smart-directory-panel,
+.dashboard-extras-panel .dashboard-telegram-slot {
+  width: 100%;
+}
+
+
+/* ===== 控制台区块顺序后的统一视觉层级 ===== */
+.library-page {
+  gap: .85rem;
+}
+.library-header {
+  gap: .7rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  backdrop-filter: none;
+}
+.library-header > .dashboard-panel,
+.library-page > .content-panel,
+.library-page > .image-stats-panel,
+.dashboard-extras-panel > .dashboard-panel,
+.dashboard-extras-panel > .ai-settings-panel,
+.dashboard-extras-panel > .dashboard-telegram-slot,
+.library-page > section.rounded-xl {
+  box-sizing: border-box;
+  width: 100%;
+}
+.library-header > .dashboard-panel,
+.dashboard-extras-panel > .dashboard-panel,
+.dashboard-extras-panel > .ai-settings-panel {
+  border-color: rgba(53,243,255,.14);
+  border-radius: 10px;
+}
+.dashboard-extras-panel {
+  gap: .7rem;
+}
+.dashboard-extras-panel > .smart-directory-panel {
+  order: 1;
+}
+.dashboard-extras-panel > .dashboard-ai-panel {
+  order: 2;
+}
+.dashboard-extras-panel > .dashboard-telegram-slot {
+  order: 3;
+}
+.image-stats-panel {
+  margin-top: 0;
+}
+@media (max-width: 720px) {
+  .library-page { gap: .7rem; }
+  .library-header { gap: .6rem; }
+}
+
