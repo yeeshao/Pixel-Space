@@ -1351,3 +1351,50 @@
   line-height: 1;
   backdrop-filter: blur(8px);
 }
+
+
+/* 2026-09-20：控制台照片统计放到公开/私有标签下方，避免遮挡左上角勾选框。 */
+.image-analytics-badge {
+  position: absolute;
+  top: 2.35rem;
+  right: 0.55rem;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.18rem;
+  pointer-events: none;
+}
+.image-analytics-badge span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 3.15rem;
+  height: 1.35rem;
+  padding: 0 0.42rem;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  background: rgba(7,7,19,.76);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  color: rgba(226,232,240,.94);
+  font-size: .58rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+}
+@media (max-width:420px) {
+  .image-analytics-badge {
+    top: 2.08rem;
+    right: .4rem;
+    gap: .14rem;
+  }
+  .image-analytics-badge span {
+    min-width: 2.85rem;
+    height: 1.22rem;
+    padding: 0 .34rem;
+    font-size: .54rem;
+  }
+}
+
