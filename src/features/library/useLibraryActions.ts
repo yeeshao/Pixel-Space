@@ -15,6 +15,7 @@ import {
   moveImages,
   batchAnalyzeAi,
   batchUpdateLocation,
+  batchUpdateVisibility,
   updateAiSettings,
   updateDownloadGrant,
   updateFolder,
@@ -508,6 +509,24 @@ export const useLibraryActions = ({
     }
   };
 
+  const handleBatchVisibility = async () => {
+    const keys = Array.from(selectedKeys.value);
+    if (!keys.length) return;
+
+    const selected = images.value.filter((img) => selectedKeys.value.has(img.key));
+    const target: 0 | 1 =
+      selected.length > 0 && selected.every((img) => Number(img.is_public) !== 0) ? 0 : 1;
+
+    try {
+      const result = await batchUpdateVisibility({ keys, is_public: target });
+      images.value = images.value.map((img) => result.items.find((item) => item.key === img.key) ?? img);
+      selectedKeys.value = new Set();
+      actionMessage.value = `已将 ${result.processed} 张图片设为${target === 1 ? '公开' : '私有'}`;
+    } catch (error) {
+      actionMessage.value = `批量修改图片公开状态失败：${(error as Error).message}`;
+    }
+  };
+
   const handleBatchAi = async () => {
     const keys = Array.from(selectedKeys.value);
     if (!keys.length) return;
@@ -604,7 +623,9 @@ export const useLibraryActions = ({
     handleMove,
     handleBatchDelete,
     handleBatchLocation,
+    handleBatchVisibility,
     handleBatchAi,
     saveAiSettings,
   };
 };
+
