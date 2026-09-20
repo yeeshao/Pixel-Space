@@ -6,6 +6,7 @@ import { imageBelongsToGrant, resolveActiveGrant } from '../../../_shared/downlo
 import { streamTelegramOriginal, type OriginalImageRow } from '../../../_shared/original';
 import { keyFromRouteParam } from '../../../_shared/keys';
 import { requireSameOrigin } from '../../../_shared/security';
+import { recordImageEvent } from '../../../_shared/analytics';
 import {
   attachVisitorChallengeCookie,
   blockedVisitorCodeRetryAfter,
@@ -72,6 +73,7 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/downlo
     if (!response) return attachVisitorChallengeCookie(notFound('original_not_archived'), challengeResult.challenge);
 
     clearFailedVisitorCodes(request, challengeResult.challenge);
+    await recordImageEvent(env.DB, request, key, 'download', logger);
     return attachVisitorChallengeCookie(response, challengeResult.challenge);
   } catch (error) {
     logger.error('POST /api/download-grants/original/:key failed', {

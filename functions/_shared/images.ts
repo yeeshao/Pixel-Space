@@ -37,10 +37,12 @@ export interface ImageRecord {
   is_public: number;
   location_public: number;
   folder_id: string | null;
+  view_count: number;
+  download_count: number;
 }
 
 export const IMAGE_SELECT_COLUMNS =
-  'key, title, caption, original_filename, width, height, format, bytes_compressed, original_bytes, original_width, original_height, location_name, location_lat, location_lng, location_region, exif_taken_at, exif_camera, exif_iso, exif_aperture, exif_shutter, exif_focal_length, tags_json, search_content, dominant_color, color_palette_json, composition, ai_status, tg_status, created_at, updated_at, is_public, location_public, folder_id';
+  'key, title, caption, original_filename, width, height, format, bytes_compressed, original_bytes, original_width, original_height, location_name, location_lat, location_lng, location_region, exif_taken_at, exif_camera, exif_iso, exif_aperture, exif_shutter, exif_focal_length, tags_json, search_content, dominant_color, color_palette_json, composition, ai_status, tg_status, created_at, updated_at, is_public, location_public, folder_id, view_count, download_count';
 
 // D1 表里的原始行形状（只声明 list / detail 接口会用到的列）。
 export interface ImageRow {
@@ -77,6 +79,8 @@ export interface ImageRow {
   is_public: number;
   location_public: number;
   folder_id: string | null;
+  view_count: number;
+  download_count: number;
 }
 
 export const normalizeTagsJson = (value: unknown): string | null => {
@@ -155,6 +159,8 @@ export function rowToRecord(row: ImageRow, publicBaseUrl: string): ImageRecord {
     is_public: row.is_public,
     location_public: row.location_public,
     folder_id: row.folder_id,
+    view_count: Number(row.view_count ?? 0),
+    download_count: Number(row.download_count ?? 0),
   };
 }
 

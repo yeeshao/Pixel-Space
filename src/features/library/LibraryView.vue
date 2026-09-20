@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue';
 import TelegramInboxPanel from './TelegramInboxPanel.vue';
+import AnalyticsPanel from './AnalyticsPanel.vue';
 import AppShell from '@/shared/ui/AppShell.vue';
 import LoadingState from '@/shared/ui/LoadingState.vue';
 import type { ImageRecord } from '@/features/images/image.types';
@@ -171,6 +172,8 @@ onBeforeUnmount(() => {
       </LibraryHeader>
 
       <p v-if="actionMessage" class="action-toast">{{ actionMessage }}</p>
+
+      <AnalyticsPanel />
 
       <LoadingState v-if="loading" title="正在加载控制台" message="同步文件夹、图片和授权信息" />
       <LoadingState v-else-if="loadError" title="控制台加载失败" :error="loadError" />

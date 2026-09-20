@@ -55,7 +55,9 @@ CREATE TABLE images (
   composition        TEXT,
   is_public          INTEGER NOT NULL DEFAULT 1,
   location_public    INTEGER NOT NULL DEFAULT 1,
-  folder_id          TEXT REFERENCES folders(id)
+  folder_id          TEXT REFERENCES folders(id),
+  view_count         INTEGER NOT NULL DEFAULT 0,
+  download_count     INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_images_created_at ON images (created_at DESC);
@@ -91,3 +93,18 @@ CREATE TABLE download_grant_images (
 );
 
 CREATE INDEX idx_download_grant_images_image_key ON download_grant_images (image_key);
+
+
+CREATE TABLE analytics_events (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  image_key  TEXT NOT NULL,
+  event      TEXT NOT NULL CHECK (event IN ('view', 'download')),
+  ip         TEXT NOT NULL DEFAULT 'unknown',
+  user_agent TEXT,
+  cf_ray     TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (image_key) REFERENCES images(key) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_analytics_events_created_at ON analytics_events(created_at DESC);
+CREATE INDEX idx_analytics_events_image_key ON analytics_events(image_key, created_at DESC);

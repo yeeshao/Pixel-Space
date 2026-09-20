@@ -4,6 +4,7 @@ import { notFound, serverError } from '../../../_shared/http';
 import { keyFromRouteParam } from '../../../_shared/keys';
 import { isFolderPublic } from '../../../_shared/folders';
 import { streamTelegramOriginal } from '../../../_shared/original';
+import { recordImageEvent } from '../../../_shared/analytics';
 
 const ORIGINAL_SQL = `
   SELECT key, original_filename, tg_file_id, tg_status, tg_error, folder_id, is_public
@@ -49,6 +50,10 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging(
       }
 
       // 默认 inline，供访客查看器加载原图；?download=1 时改为附件下载。
+      // 只有明确下载才计入下载数，查看器加载原图不会重复算下载。
+      if (request.url.includes('download=1')) {
+        await recordImageEvent(env.DB, request, key, 'download', logger);
+      }
       const headers = new Headers(response.headers);
       const disposition = headers.get('content-disposition');
       if (disposition) {

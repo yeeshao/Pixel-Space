@@ -33,4 +33,6 @@ export interface ImageRecord {
   is_public: number;
   location_public: number;
   folder_id: string | null;
+  view_count: number;
+  download_count: number;
 }
