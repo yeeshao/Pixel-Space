@@ -200,6 +200,7 @@ onBeforeUnmount(() => {
         @drag-select="selectKey"
         @open-lightbox="openLightbox"
         @toggle-folder-visibility="handleToggleFolderVisibility"
+        @toggle-image-visibility="handleToggleImageVisibility"
         @rename-folder="handleRenameFolder"
         @move-folder="handleMoveFolder"
         @delete-folder="handleDeleteFolder"
@@ -257,3 +258,4 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped src="./library-view.css"></style>
+
