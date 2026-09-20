@@ -1336,3 +1336,18 @@
   }
 }
 
+
+
+.analytics-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 9999px;
+  padding: .18rem .45rem;
+  background: rgba(0,0,0,.68);
+  font-size: .62rem;
+  font-weight: 700;
+  line-height: 1;
+  backdrop-filter: blur(8px);
+}

@@ -131,6 +131,10 @@ const exifRows = computed(() => {
       <template v-else-if="image">
         <div class="public-image-layout">
           <figure class="public-image-preview cyber-panel">
+            <div class="pointer-events-none absolute right-4 top-4 z-[3] flex gap-2">
+              <span class="rounded-full border border-white/20 bg-black/75 px-2.5 py-1 text-xs font-bold text-cyan-100 backdrop-blur">👁 {{ (image.view_count ?? 0).toLocaleString() }}</span>
+              <span class="rounded-full border border-white/20 bg-black/75 px-2.5 py-1 text-xs font-bold text-pink-100 backdrop-blur">↓ {{ (image.download_count ?? 0).toLocaleString() }}</span>
+            </div>
             <img
               :src="originalObjectUrl || image.public_url"
               :alt="image.title"
@@ -153,10 +157,6 @@ const exifRows = computed(() => {
               <div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-400">
                 <span class="font-mono">{{ image.width }} × {{ image.height }} · {{ image.format.toUpperCase() }}</span>
                 <span v-if="image.location_name" class="font-mono">📍 {{ image.location_name }}</span>
-              </div>
-              <div class="mt-3 flex flex-wrap gap-2 text-xs">
-                <span class="rounded-full border border-neon-cyan/20 bg-neon-cyan/5 px-2.5 py-1 font-mono text-neon-cyan">👁 {{ (image.view_count ?? 0).toLocaleString() }} 次访问</span>
-                <span class="rounded-full border border-neon-pink/20 bg-neon-pink/5 px-2.5 py-1 font-mono text-neon-pink">↓ {{ (image.download_count ?? 0).toLocaleString() }} 次下载</span>
               </div>
               <dl class="public-exif-grid">
                 <div v-for="row in exifRows" :key="row.label" class="public-exif-item">

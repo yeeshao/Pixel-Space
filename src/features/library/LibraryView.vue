@@ -173,8 +173,6 @@ onBeforeUnmount(() => {
 
       <p v-if="actionMessage" class="action-toast">{{ actionMessage }}</p>
 
-      <AnalyticsPanel />
-
       <LoadingState v-if="loading" title="正在加载控制台" message="同步文件夹、图片和授权信息" />
       <LoadingState v-else-if="loadError" title="控制台加载失败" :error="loadError" />
 
@@ -253,6 +251,8 @@ onBeforeUnmount(() => {
       @create="handleCreateDownloadGrant"
       @clear="clearGrantResult"
     />
+
+    <AnalyticsPanel />
   </AppShell>
 </template>
 

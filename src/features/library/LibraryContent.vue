@@ -338,6 +338,10 @@ const handleTileClick = (img: ImageRecord) => {
           @click.exact="handleTileClick(img)"
         >
           <img :src="img.public_url" :alt="img.title" loading="lazy" draggable="false" @dragstart.prevent />
+          <span class="pointer-events-none absolute left-2 top-2 z-[4] flex gap-1">
+            <span class="rounded-full border border-white/20 bg-black/75 px-1.5 py-0.5 text-[0.58rem] font-bold text-cyan-100 backdrop-blur">👁 {{ (img.view_count ?? 0).toLocaleString() }}</span>
+            <span class="rounded-full border border-white/20 bg-black/75 px-1.5 py-0.5 text-[0.58rem] font-bold text-pink-100 backdrop-blur">↓ {{ (img.download_count ?? 0).toLocaleString() }}</span>
+          </span>
           <span
             class="image-visibility-badge"
             :class="img.is_public !== 0 ? 'is-public' : 'is-private'"

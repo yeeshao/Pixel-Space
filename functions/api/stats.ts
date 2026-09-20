@@ -14,7 +14,9 @@ const SUMMARY_SQL = `
 SELECT
   COUNT(*) AS photos,
   COALESCE(SUM(bytes_compressed), 0) AS storage_bytes,
-  COALESCE(COUNT(DISTINCT CASE WHEN location_name IS NOT NULL AND location_public = 1 THEN location_name END), 0) AS places
+  COALESCE(COUNT(DISTINCT CASE WHEN location_name IS NOT NULL AND location_public = 1 THEN location_name END), 0) AS places,
+  COALESCE(SUM(view_count), 0) AS views,
+  COALESCE(SUM(download_count), 0) AS downloads
 FROM images
 WHERE is_public = 1
 `;
@@ -31,6 +33,8 @@ interface SummaryRow {
   photos: number;
   storage_bytes: number;
   places: number;
+  views: number;
+  downloads: number;
 }
 
 export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/stats', async ({ env, request }, logger) => {
@@ -50,6 +54,8 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/stats',
       photos: summary?.photos ?? 0,
       storage_bytes: summary?.storage_bytes ?? 0,
       places: summary?.places ?? 0,
+      views: summary?.views ?? 0,
+      downloads: summary?.downloads ?? 0,
       latest: latestRecords,
     });
   } catch (error) {

@@ -274,6 +274,10 @@ const clearSearch = async () => {
             loading="lazy"
             class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
           />
+          <div class="pointer-events-none absolute right-2 top-2 z-[3] flex flex-wrap justify-end gap-1.5">
+            <span class="rounded-full border border-white/20 bg-black/70 px-2 py-1 text-[0.65rem] font-bold text-cyan-100 backdrop-blur">👁 {{ (displayImages[i].view_count ?? 0).toLocaleString() }}</span>
+            <span class="rounded-full border border-white/20 bg-black/70 px-2 py-1 text-[0.65rem] font-bold text-pink-100 backdrop-blur">↓ {{ (displayImages[i].download_count ?? 0).toLocaleString() }}</span>
+          </div>
           <div
             class="gallery-card-title pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-void/92 via-void/55 to-transparent px-3 pb-2 pt-7 opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100"
           >

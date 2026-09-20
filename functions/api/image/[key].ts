@@ -10,15 +10,16 @@ import { recordImageEvent } from '../../_shared/analytics';
 // 单图详情公开入口：访客只能访问公开图，且对 location_public=0 的图擦掉地名与坐标。
 const DETAIL_SQL = `SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key = ?`;
 
-export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/image/:key', async ({ env, params, request }, logger) => {
+export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/image/:key', async ({ env, params, request, waitUntil }, logger) => {
   const key = keyFromRouteParam(params.key);
   if (!key) return notFound();
   try {
     const row = await env.DB.prepare(DETAIL_SQL).bind(key).first<ImageRow>();
     if (!row) return notFound();
     if (row.is_public !== 1 || !(await isFolderPublic(env.DB, row.folder_id))) return notFound();
-    await recordImageEvent(env.DB, request, key, 'view', logger);
     const record = rowToRecord(row, env.PUBLIC_BASE_URL);
+    const analyticsTask = recordImageEvent(env.DB, request, key, 'view', logger);
+    if (typeof waitUntil === 'function') waitUntil(analyticsTask); else await analyticsTask;
     return json(scrubRecordForVisitor(record));
   } catch (error) {
     logger.error('GET /api/image/:key failed', {

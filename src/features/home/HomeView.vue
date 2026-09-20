@@ -10,6 +10,8 @@ interface StatsResponse {
   photos: number;
   storage_bytes: number;
   places: number;
+  views: number;
+  downloads: number;
   latest: ImageRecord[];
 }
 
@@ -27,6 +29,8 @@ const formatNumber = (value: number): string => value.toLocaleString('en-US');
 const photosLabel = computed(() => (stats.value ? formatNumber(stats.value.photos) : '--'));
 const storageLabel = computed(() => (stats.value ? formatBytes(stats.value.storage_bytes, '0 B') : '--'));
 const placesLabel = computed(() => (stats.value ? formatNumber(stats.value.places) : '--'));
+const viewsLabel = computed(() => (stats.value ? formatNumber(stats.value.views) : '--'));
+const downloadsLabel = computed(() => (stats.value ? formatNumber(stats.value.downloads) : '--'));
 
 const latest = computed(() => stats.value?.latest ?? []);
 
@@ -107,11 +111,21 @@ onMounted(async () => {
           </RouterLink>
         </div>
 
-        <dl class="mt-16 grid w-full max-w-3xl grid-cols-3 gap-6 sm:gap-8">
+        <dl class="mt-16 grid w-full max-w-5xl grid-cols-2 gap-5 sm:grid-cols-5 sm:gap-6">
           <div class="stat-cell">
             <dt class="stat-label">Photos</dt>
             <dd class="stat-value">{{ photosLabel }}</dd>
             <p class="stat-hint">已收录公开图片</p>
+          </div>
+          <div class="stat-cell">
+            <dt class="stat-label">访问</dt>
+            <dd class="stat-value">{{ viewsLabel }}</dd>
+            <p class="stat-hint">公开照片总访问次数</p>
+          </div>
+          <div class="stat-cell">
+            <dt class="stat-label">下载</dt>
+            <dd class="stat-value">{{ downloadsLabel }}</dd>
+            <p class="stat-hint">公开原图总下载次数</p>
           </div>
           <div class="stat-cell">
             <dt class="stat-label">Storage</dt>
@@ -147,6 +161,10 @@ onMounted(async () => {
             class="latest-card"
           >
             <img :src="item.public_url" :alt="item.title || item.original_filename" loading="lazy" />
+            <div class="absolute right-2 top-2 z-[2] flex gap-1.5">
+              <span class="rounded-full border border-white/20 bg-black/70 px-2 py-1 text-[0.62rem] font-bold text-cyan-100 backdrop-blur">👁 {{ (item.view_count ?? 0).toLocaleString() }}</span>
+              <span class="rounded-full border border-white/20 bg-black/70 px-2 py-1 text-[0.62rem] font-bold text-pink-100 backdrop-blur">↓ {{ (item.download_count ?? 0).toLocaleString() }}</span>
+            </div>
             <div class="latest-overlay">
               <span class="latest-title">{{ item.title || item.original_filename }}</span>
               <span class="latest-meta">{{ item.width }} × {{ item.height }} · {{ item.format.toUpperCase() }}</span>
