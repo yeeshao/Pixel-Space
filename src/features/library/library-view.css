@@ -1417,58 +1417,348 @@
 
 
 
-/* ===== 方格模式：勾选框与文件夹图标彻底分离 ===== */
+/* ===== 文件夹显示方式：方格 / 列表 / 详细信息 ===== */
+.folder-view-heading {
+  align-items: center;
+}
+
+.folder-view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  padding: 3px;
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 10px;
+  background: rgba(7,13,27,.72);
+}
+
+.folder-view-btn {
+  display: grid;
+  place-items: center;
+  width: 2.55rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(203,213,225,.65);
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.folder-view-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.folder-view-btn:hover {
+  color: white;
+  background: rgba(53,243,255,.08);
+}
+
+.folder-view-btn.is-active {
+  color: rgb(165,243,252);
+  background: rgba(53,243,255,.13);
+  box-shadow: inset 0 0 0 1px rgba(53,243,255,.12);
+}
+
+/* 方格：真正的多列文件夹图标布局。移动端也保持至少两列。 */
+.folders-panel .folder-grid--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: .8rem;
+}
+
 .folders-panel .folder-grid--grid .folder-card {
-  position: relative;
-  padding-top: 3.65rem;
+  display: grid;
+  grid-template-columns: 2.35rem minmax(0, 1fr);
+  min-height: 7.2rem;
+  padding: .9rem;
+  align-items: center;
+}
+
+.folder-grid--grid .folder-select-check {
+  top: .65rem;
+  left: .65rem;
+  z-index: 3;
+}
+
+.folder-grid--grid .folder-body {
+  min-width: 0;
+}
+
+.folder-grid--grid .folder-name-row {
+  min-width: 0;
+}
+
+/* 列表：一行一个文件夹，但勾选框、图标、名称、状态各有固定区域。 */
+.folders-panel .folder-grid--list {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+.folders-panel .folder-grid--list .folder-card {
+  display: grid;
+  grid-template-columns: 2.25rem 2.35rem minmax(0, 1fr) auto;
+  column-gap: .75rem;
+  min-height: 4.35rem;
+  padding: .65rem .8rem;
+  align-items: center;
+}
+
+.folder-grid--list .folder-select-check {
+  position: static;
+  grid-column: 1;
+  grid-row: 1;
+  opacity: 1;
+  transform: scale(1);
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.folder-grid--list .folder-icon {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.folder-grid--list .folder-body {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.folder-grid--list .folder-name-row {
+  min-width: 0;
+}
+
+.folder-grid--list .folder-visibility {
+  position: static;
+  grid-column: 4;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.folder-grid--list .folder-meta {
+  margin-top: .25rem;
+}
+
+/* 详细信息：类似 Windows 详细信息视图，信息分栏，状态在最右侧。 */
+.folders-panel .folder-grid--details {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid rgba(148,163,184,.12);
+  border-radius: 10px;
   overflow: hidden;
 }
 
-.folders-panel .folder-grid--grid .folder-select-check {
-  position: absolute;
-  top: .72rem;
-  left: .72rem;
-  z-index: 10;
-  width: 1.8rem;
-  height: 1.8rem;
+.folders-panel .folder-grid--details .folder-card {
+  display: grid;
+  grid-template-columns: 2.25rem 2.35rem minmax(12rem, 1.4fr) minmax(7rem, .7fr) minmax(7rem, .7fr) 5.5rem;
+  column-gap: .75rem;
+  min-height: 3.9rem;
+  padding: .55rem .8rem;
+  border: 0;
+  border-bottom: 1px solid rgba(148,163,184,.10);
+  border-radius: 0;
+  background: rgba(7,7,19,.32);
+  box-shadow: none;
+  transform: none;
+}
+
+.folders-panel .folder-grid--details .folder-card:last-child {
+  border-bottom: 0;
+}
+
+.folder-grid--details .folder-select-check {
+  position: static;
+  grid-column: 1;
+  grid-row: 1;
+  opacity: 1;
+  transform: scale(1);
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.folder-grid--details .folder-icon {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.folder-grid--details .folder-body {
+  display: contents;
+}
+
+.folder-grid--details .folder-name-row {
+  display: contents;
+}
+
+.folder-grid--details .folder-name {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+  padding-right: 0 !important;
+}
+
+.folder-grid--details .folder-meta {
+  grid-column: 4 / 6;
+  grid-row: 1;
+  align-self: center;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.folders-panel .folder-grid--grid .folder-icon {
-  position: relative;
-  z-index: 1;
-  margin-top: 0 !important;
-  align-self: start;
+.folder-grid--details .folder-visibility {
+  position: static;
+  grid-column: 6;
+  grid-row: 1;
+  justify-self: end;
+  align-self: center;
 }
 
-.folders-panel .folder-grid--grid .folder-body {
-  position: relative;
-  z-index: 1;
+/* 选择框永远不会被卡片内容遮住。 */
+.folders-panel .folder-select-check {
+  z-index: 5;
+  box-sizing: border-box;
+}
+
+@media (max-width: 720px) {
+  .folder-view-heading {
+    align-items: flex-start;
+  }
+
+  .folder-view-switch {
+    margin-top: .1rem;
+  }
+
+  /* 覆盖旧的 mobile 一列规则：方格模式至少两列。 */
+  .folders-panel .folder-grid--grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .55rem;
+  }
+
+  .folders-panel .folder-grid--grid .folder-card {
+    grid-template-columns: 2rem minmax(0, 1fr);
+    min-height: 7rem;
+    padding: .7rem;
+  }
+
+  .folders-panel .folder-grid--list .folder-card {
+    grid-template-columns: 2rem 2.15rem minmax(0, 1fr) auto;
+    gap: .55rem;
+  }
+
+  .folders-panel .folder-grid--details .folder-card {
+    grid-template-columns: 2rem 2.15rem minmax(9rem, 1fr) 5.5rem;
+  }
+
+  .folder-grid--details .folder-meta {
+    grid-column: 4;
+  }
+
+  .folder-grid--details .folder-visibility {
+    grid-column: 4;
+    grid-row: 2;
+    justify-self: start;
+    margin-top: .1rem;
+  }
 }
 
 @media (max-width: 480px) {
+  .folder-view-switch {
+    padding: 2px;
+  }
+
+  .folder-view-btn {
+    width: 2.25rem;
+    height: 2rem;
+  }
+
+  /* 只有方格视图使用双列；列表和详细信息仍然是一行一个。 */
+  .folders-panel .folder-grid--grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
   .folders-panel .folder-grid--grid .folder-card {
-    min-height: 10.2rem;
-    padding-top: 3.7rem;
-    padding-left: .7rem;
-    padding-right: .7rem;
-    padding-bottom: .75rem;
+    grid-template-columns: 1fr;
+    min-height: 9.2rem;
+    gap: .55rem;
+    align-content: center;
   }
 
-  .folders-panel .folder-grid--grid .folder-select-check {
-    top: .7rem;
-    left: .7rem;
-    width: 1.75rem;
-    height: 1.75rem;
+  .folder-grid--grid .folder-select-check {
+    position: absolute;
+    top: .55rem;
+    left: .55rem;
   }
 
-  .folders-panel .folder-grid--grid .folder-icon {
-    margin-top: 0 !important;
+  .folder-grid--grid .folder-icon {
+    margin-top: .6rem;
   }
 
-  .folders-panel .folder-grid--grid .folder-visibility {
-    top: .7rem;
-    right: .7rem;
+  .folder-grid--grid .folder-name {
+    padding-right: 0 !important;
+  }
+
+  .folder-grid--grid .folder-name-row {
+    display: block;
+  }
+
+  .folder-grid--grid .folder-visibility {
+    position: absolute;
+    right: .55rem;
+    top: .55rem;
+  }
+
+  .folder-grid--list .folder-card {
+    grid-template-columns: 1.8rem 2rem minmax(0, 1fr) auto;
+    gap: .45rem;
+    padding: .55rem;
+  }
+
+  .folder-grid--list .folder-select-check {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
+
+  .folder-grid--list .folder-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .folder-grid--list .folder-visibility {
+    min-width: 3.2rem;
+    padding-inline: .35rem;
+    font-size: .62rem;
+  }
+
+  .folders-panel .folder-grid--details .folder-card {
+    grid-template-columns: 1.8rem 2rem minmax(0, 1fr) auto;
+    min-height: 4.2rem;
+    gap: .45rem;
+  }
+
+  .folder-grid--details .folder-name {
+    grid-column: 3;
+  }
+
+  .folder-grid--details .folder-meta {
+    display: none;
+  }
+
+  .folder-grid--details .folder-visibility {
+    grid-column: 4;
+    grid-row: 1;
+    margin: 0;
   }
 }
 
