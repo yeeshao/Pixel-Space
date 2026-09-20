@@ -111,33 +111,37 @@ onMounted(async () => {
           </RouterLink>
         </div>
 
-        <dl class="mt-16 grid w-full max-w-5xl grid-cols-2 gap-5 sm:grid-cols-5 sm:gap-6">
-          <div class="stat-cell">
-            <dt class="stat-label">Photos</dt>
-            <dd class="stat-value">{{ photosLabel }}</dd>
-            <p class="stat-hint">已收录公开图片</p>
-          </div>
-          <div class="stat-cell">
-            <dt class="stat-label">访问</dt>
-            <dd class="stat-value">{{ viewsLabel }}</dd>
-            <p class="stat-hint">公开照片总访问次数</p>
-          </div>
-          <div class="stat-cell">
-            <dt class="stat-label">下载</dt>
-            <dd class="stat-value">{{ downloadsLabel }}</dd>
-            <p class="stat-hint">公开原图总下载次数</p>
-          </div>
-          <div class="stat-cell">
-            <dt class="stat-label">Storage</dt>
-            <dd class="stat-value">{{ storageLabel }}</dd>
-            <p class="stat-hint">压缩后占用</p>
-          </div>
-          <div class="stat-cell">
-            <dt class="stat-label">Places</dt>
-            <dd class="stat-value">{{ placesLabel }}</dd>
-            <p class="stat-hint">点亮的地点</p>
-          </div>
-        </dl>
+        <div class="mt-16 grid w-full max-w-5xl gap-5 sm:gap-6">
+          <dl class="grid grid-cols-3 gap-3 sm:gap-5">
+            <div class="stat-cell">
+              <dt class="stat-label">Photos</dt>
+              <dd class="stat-value">{{ photosLabel }}</dd>
+              <p class="stat-hint">已收录公开图片</p>
+            </div>
+            <div class="stat-cell">
+              <dt class="stat-label">Storage</dt>
+              <dd class="stat-value">{{ storageLabel }}</dd>
+              <p class="stat-hint">压缩后占用</p>
+            </div>
+            <div class="stat-cell">
+              <dt class="stat-label">Places</dt>
+              <dd class="stat-value">{{ placesLabel }}</dd>
+              <p class="stat-hint">点亮的地点</p>
+            </div>
+          </dl>
+          <dl class="grid grid-cols-2 gap-3 sm:gap-5">
+            <div class="stat-cell">
+              <dt class="stat-label">访问</dt>
+              <dd class="stat-value">{{ viewsLabel }}</dd>
+              <p class="stat-hint">公开照片总访问次数</p>
+            </div>
+            <div class="stat-cell">
+              <dt class="stat-label">下载</dt>
+              <dd class="stat-value">{{ downloadsLabel }}</dd>
+              <p class="stat-hint">公开原图总下载次数</p>
+            </div>
+          </dl>
+        </div>
         <p v-if="loadError" class="mt-4 text-sm font-semibold text-rose-300">
           统计加载失败：{{ loadError }}
         </p>
@@ -161,10 +165,6 @@ onMounted(async () => {
             class="latest-card"
           >
             <img :src="item.public_url" :alt="item.title || item.original_filename" loading="lazy" />
-            <div class="absolute right-2 top-2 z-[2] flex gap-1.5">
-              <span class="rounded-full border border-white/20 bg-black/70 px-2 py-1 text-[0.62rem] font-bold text-cyan-100 backdrop-blur">👁 {{ (item.view_count ?? 0).toLocaleString() }}</span>
-              <span class="rounded-full border border-white/20 bg-black/70 px-2 py-1 text-[0.62rem] font-bold text-pink-100 backdrop-blur">↓ {{ (item.download_count ?? 0).toLocaleString() }}</span>
-            </div>
             <div class="latest-overlay">
               <span class="latest-title">{{ item.title || item.original_filename }}</span>
               <span class="latest-meta">{{ item.width }} × {{ item.height }} · {{ item.format.toUpperCase() }}</span>
@@ -622,4 +622,5 @@ onMounted(async () => {
   color: rgba(148, 163, 184, 0.9);
 }
 </style>
+
 
