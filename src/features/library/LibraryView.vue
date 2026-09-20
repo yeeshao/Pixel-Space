@@ -268,6 +268,7 @@ onBeforeUnmount(() => {
     <ImageLightbox
       :open="lightboxOpen"
       :image="lightboxImage"
+      :admin-original="true"
       @close="lightboxOpen = false"
       @prev="showPreviousImage"
       @next="showNextImage"
@@ -289,6 +290,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped src="./library-view.css"></style>
+
 
 
 
