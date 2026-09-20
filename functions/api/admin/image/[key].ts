@@ -229,21 +229,16 @@ export const onRequestDelete: PagesFunction<Env> = withRequestLogging('/api/admi
     await deleteUnusedStaticMapCache(env, row);
     await env.BUCKET.delete(row.key);
 
-    if (row.tg_chat_id && row.tg_message_id) {
-      try {
-        await deleteTelegramMessage({
-          token: env.TG_BOT_TOKEN,
-          chatId: row.tg_chat_id,
-          messageId: row.tg_message_id,
-        });
-      } catch (error) {
-        logger.error('Telegram message cleanup failed', {
-          error,
-          context: { key },
-        });
-      }
+    const partRows = await env.DB.prepare('SELECT tg_message_id,tg_chat_id FROM telegram_archive_parts WHERE image_key=?').bind(key).all<{tg_message_id:number;tg_chat_id:string}>();
+    for (const part of partRows.results ?? []) {
+      try { await deleteTelegramMessage({ token: env.TG_BOT_TOKEN, chatId: part.tg_chat_id, messageId: part.tg_message_id }); }
+      catch (error) { logger.error('Telegram archive part cleanup failed', { error, context: { key } }); }
     }
-
+    if (row.tg_chat_id && row.tg_message_id) {
+      try { await deleteTelegramMessage({ token: env.TG_BOT_TOKEN, chatId: row.tg_chat_id, messageId: row.tg_message_id }); }
+      catch (error) { logger.error('Telegram message cleanup failed', { error, context: { key } }); }
+    }
+    await env.DB.prepare('DELETE FROM telegram_archive_parts WHERE image_key=?').bind(key).run();
     await env.DB.prepare(DELETE_SQL).bind(key).run();
     return json({ ok: true, key });
   } catch (error) {
@@ -254,3 +249,4 @@ export const onRequestDelete: PagesFunction<Env> = withRequestLogging('/api/admi
     return serverError('image_delete_failed');
   }
 });
+
