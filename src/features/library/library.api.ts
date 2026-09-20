@@ -178,16 +178,17 @@ export function batchUpdateLocation(payload: { keys: string[]; location_name: st
 
 export function batchAnalyzeAi(keys: string[]): Promise<BatchImagesResponse> {
   return jsonFetch<BatchImagesResponse>('/api/admin/images/batch', {
-    method: 'POST', headers: { 'content-type': 'application/json' },
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ action: 'ai', keys }),
   });
+}
+
 export function batchUpdateVisibility(payload: { keys: string[]; is_public: 0 | 1 }): Promise<BatchImagesResponse> {
   return jsonFetch<BatchImagesResponse>('/api/admin/images/batch', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ action: 'visibility', ...payload }),
   });
-}
-
 }
 
