@@ -17,6 +17,7 @@ interface UseImageLightboxDetailsOptions {
   locationEditOpen: Readonly<Ref<boolean>>;
   editSearchRegion: Readonly<Ref<GeocodeRegion>>;
   editForm: ImageLightboxEditForm;
+  adminOriginal?: boolean;
 }
 
 export const originalImageUrl = (image: ImageRecord) => `/api/image/${encodeURIComponent(image.key)}/original`;
@@ -27,6 +28,7 @@ export const useImageLightboxDetails = ({
   locationEditOpen,
   editSearchRegion,
   editForm,
+  adminOriginal = false,
 }: UseImageLightboxDetailsOptions) => {
   const publicPageUrl = computed(() => {
     if (!image.value) return '';
@@ -35,6 +37,14 @@ export const useImageLightboxDetails = ({
 
   const originalUrl = computed(() => {
     if (!image.value) return '';
+    if (adminOriginal) {
+      const encodedKey = image.value.key
+        .replace(/^\/+/, '')
+        .split('/')
+        .map((part) => encodeURIComponent(part))
+        .join('%2F');
+      return `/api/admin/original/${encodedKey}`;
+    }
     return originalImageUrl(image.value);
   });
 
@@ -112,3 +122,4 @@ export const useImageLightboxDetails = ({
     mapRegion,
   };
 };
+
