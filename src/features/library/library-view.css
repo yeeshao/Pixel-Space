@@ -1229,3 +1229,28 @@
   .folder-select-check { opacity:1; transform:scale(1); width:1.8rem; height:1.8rem; }
   .folder-card.is-select-mode .folder-name { padding-left:2.15rem; }
 }
+
+
+/* Folder management actions stay on one row, including on phones. */
+.folder-actions-panel .library-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  width: 100%;
+}
+.folder-actions-panel .library-actions .library-btn {
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .folder-actions-panel .library-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .folder-actions-panel .library-actions .library-btn {
+    padding-inline: 0.35rem;
+    font-size: 0.72rem;
+  }
+}
+
