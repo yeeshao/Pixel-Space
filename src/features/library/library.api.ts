@@ -163,7 +163,7 @@ export function deleteDownloadGrant(id: string): Promise<void> {
 
 export interface BatchImagesResponse {
   ok: boolean;
-  action: 'location' | 'ai';
+  action: 'location' | 'visibility' | 'ai';
   processed: number;
   failed: string[];
   items: ImageRecord[];
@@ -181,4 +181,13 @@ export function batchAnalyzeAi(keys: string[]): Promise<BatchImagesResponse> {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ action: 'ai', keys }),
   });
+export function batchUpdateVisibility(payload: { keys: string[]; is_public: 0 | 1 }): Promise<BatchImagesResponse> {
+  return jsonFetch<BatchImagesResponse>('/api/admin/images/batch', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ action: 'visibility', ...payload }),
+  });
 }
+
+}
+
