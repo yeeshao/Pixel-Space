@@ -26,6 +26,7 @@ const {
   displayFileName,
   hasEntries,
   readyEntries,
+  retryCount,
   queueCountLabel,
   canSubmit,
   statusLabel,
@@ -180,6 +181,7 @@ onBeforeUnmount(() => {
           :can-submit="canSubmit"
           :is-batch-uploading="isBatchUploading"
           :ready-count="readyEntries.length"
+          :failed-count="retryCount"
           @open="openFilePicker"
           @open-system-file="openSystemFile"
           @drop="handleDrop"
