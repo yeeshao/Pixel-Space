@@ -1398,3 +1398,19 @@
   }
 }
 
+
+/* 2026-09-20：照片公开/私有徽章在控制台中作为快捷切换按钮。 */
+.image-visibility-badge.image-visibility-toggle {
+  pointer-events:auto;
+  cursor:pointer;
+  user-select:none;
+}
+.image-visibility-badge.image-visibility-toggle:hover {
+  transform:translateY(-1px);
+  filter:brightness(1.08);
+}
+.image-visibility-badge.image-visibility-toggle:focus-visible {
+  outline:2px solid rgba(53,243,255,.8);
+  outline-offset:2px;
+}
+
