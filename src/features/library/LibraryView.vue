@@ -10,6 +10,8 @@ import type { DownloadGrantRecord, FolderRecord } from './library.api';
 import LibraryContent from './LibraryContent.vue';
 import BatchLocationDialog from './BatchLocationDialog.vue';
 import LibraryHeader from './LibraryHeader.vue';
+import DashboardExtrasPanel from './DashboardExtrasPanel.vue';
+import ImageStatsPanel from './ImageStatsPanel.vue';
 import LibraryMoveBar from './LibraryMoveBar.vue';
 import { useLibraryActions } from './useLibraryActions';
 import { useLibraryDirectory } from './useLibraryDirectory';
@@ -153,23 +155,15 @@ onBeforeUnmount(() => {
   <AppShell fluid>
     <section class="library-page">
       <LibraryHeader
-        :ai-settings-form="aiSettingsForm"
-        :ai-settings-saving="aiSettingsSaving"
         :breadcrumb="breadcrumb"
         :current-folder="currentFolder"
         :current-folder-id="currentFolderId"
-        :current-virtual="currentVirtual"
-        :virtual-counts="virtualCounts"
         @enter-folder="navigateFolder"
         @create-folder="handleCreateFolder"
         @rename-current="handleRenameCurrent"
         @delete-current="handleDeleteCurrent"
         @refresh="refreshAll"
-        @save-ai-settings="saveAiSettings"
       >
-        <template #telegram>
-          <TelegramInboxPanel @processed="refreshAll" />
-        </template>
       </LibraryHeader>
 
       <p v-if="actionMessage" class="action-toast">{{ actionMessage }}</p>
@@ -182,7 +176,6 @@ onBeforeUnmount(() => {
         v-model:sort-mode="sortMode"
         :current-folder-id="currentFolderId"
         :current-images="currentImages"
-        :image-stats="imageStats"
         :current-readonly="currentReadonly"
         :current-virtual="currentVirtual"
         :download-grants="downloadGrants"
@@ -209,9 +202,27 @@ onBeforeUnmount(() => {
         @batch-move-folders="handleBatchMoveFolders"
         @batch-delete-folders="handleBatchDeleteFolders"
         @batch-toggle-folder-visibility="handleBatchToggleFolderVisibility"
-      />
+     >
+        <template #after-folders>
+          <ImageStatsPanel :current-folder-id="currentFolderId" :image-stats="imageStats" />
+        </template>
+      </LibraryContent>
 
+      <DashboardExtrasPanel
+        :ai-settings-form="aiSettingsForm"
+        :ai-settings-saving="aiSettingsSaving"
+        :current-folder-id="currentFolderId"
+        :current-virtual="currentVirtual"
+        :virtual-counts="virtualCounts"
+        @enter-folder="navigateFolder"
+        @save-ai-settings="saveAiSettings"
+      >
+        <template #telegram>
+          <TelegramInboxPanel @processed="refreshAll" />
+        </template>
+      </DashboardExtrasPanel>
 
+      <AnalyticsPanel />
 
       <LibraryMoveBar
         v-model:move-target="moveTarget"
@@ -254,9 +265,9 @@ onBeforeUnmount(() => {
       @clear="clearGrantResult"
     />
 
-    <AnalyticsPanel />
   </AppShell>
 </template>
 
 <style scoped src="./library-view.css"></style>
+
 
