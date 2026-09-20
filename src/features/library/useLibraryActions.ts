@@ -510,14 +510,13 @@ export const useLibraryActions = ({
   };
 
   const handleToggleImageVisibility = async (image: ImageRecord) => {
+    if (currentReadonly.value) return;
     const target: 0 | 1 = Number(image.is_public) !== 0 ? 0 : 1;
+
     try {
       const result = await batchUpdateVisibility({ keys: [image.key], is_public: target });
-      const updated = result.items.find((item) => item.key === image.key);
-      if (updated) {
-        images.value = images.value.map((img) => (img.key === image.key ? updated : img));
-      }
-      actionMessage.value = `已将照片设为${target === 1 ? '公开' : '私有'}`;
+      images.value = images.value.map((img) => result.items.find((item) => item.key === img.key) ?? img);
+      actionMessage.value = target === 1 ? '照片已设为公开' : '照片已设为私有';
     } catch (error) {
       actionMessage.value = `修改照片公开状态失败：${(error as Error).message}`;
     }
@@ -633,12 +632,12 @@ export const useLibraryActions = ({
     handleBatchToggleFolderVisibility,
     handleRenameCurrent,
     handleToggleFolderVisibility,
+    handleToggleImageVisibility,
     handleDeleteCurrent,
     handleMove,
     handleBatchDelete,
     handleBatchLocation,
     handleBatchVisibility,
-    handleToggleImageVisibility,
     handleBatchAi,
     saveAiSettings,
   };
