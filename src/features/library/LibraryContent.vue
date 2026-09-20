@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onBeforeUnmount, watch } from 'vue';
+import { computed, ref, onBeforeUnmount, onMounted, watch } from 'vue';
 import type { ImageRecord } from '@/features/images/image.types';
 import { imageSortOptions, type ImageSortMode } from '@/features/images/image-sort';
 import SelectPopover from '@/shared/ui/SelectPopover.vue';
@@ -35,13 +35,20 @@ const props = defineProps<{
 const sortMode = defineModel<ImageSortMode>('sortMode', { required: true });
 
 type FolderViewMode = 'grid' | 'list' | 'details';
-const folderViewMode = ref<FolderViewMode>(
-  (localStorage.getItem('pixel-space-folder-view-mode') as FolderViewMode) || 'grid',
-);
+const folderViewMode = ref<FolderViewMode>('grid');
+
+onMounted(() => {
+  const saved = window.localStorage.getItem('pixel-space-folder-view-mode');
+  if (saved === 'grid' || saved === 'list' || saved === 'details') {
+    folderViewMode.value = saved;
+  }
+});
+
 const setFolderViewMode = (mode: FolderViewMode) => {
   folderViewMode.value = mode;
-  localStorage.setItem('pixel-space-folder-view-mode', mode);
+  window.localStorage.setItem('pixel-space-folder-view-mode', mode);
 };
+
 
 const emit = defineEmits<{
   clearSelection: [];
@@ -218,18 +225,58 @@ const handleTileClick = (img: ImageRecord) => {
 
   <template v-else>
     <section v-if="subfolders.length > 0" class="content-panel folders-panel" aria-label="实际文件夹">
-      <header class="content-panel-heading">
+      <header class="content-panel-heading folder-view-heading">
         <div>
           <h2>实际文件夹</h2>
           <p>{{ subfolders.length }} 个子文件夹 · 图片数量包含所有下级文件夹</p>
         </div>
         <div class="folder-view-switch" role="group" aria-label="文件夹显示方式">
-          <button type="button" :class="{ active: folderViewMode === 'grid' }"
-            title="图标显示" aria-label="图标显示" @click="setFolderViewMode('grid')">▦</button>
-          <button type="button" :class="{ active: folderViewMode === 'list' }"
-            title="列表显示" aria-label="列表显示" @click="setFolderViewMode('list')">☷</button>
-          <button type="button" :class="{ active: folderViewMode === 'details' }"
-            title="详细信息" aria-label="详细信息" @click="setFolderViewMode('details')">☰</button>
+          <button
+            type="button"
+            class="folder-view-btn"
+            :class="{ 'is-active': folderViewMode === 'grid' }"
+            title="方格显示"
+            aria-label="方格显示"
+            :aria-pressed="folderViewMode === 'grid'"
+            @click="setFolderViewMode('grid')"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="4" y="4" width="6" height="6" rx="1" />
+              <rect x="14" y="4" width="6" height="6" rx="1" />
+              <rect x="4" y="14" width="6" height="6" rx="1" />
+              <rect x="14" y="14" width="6" height="6" rx="1" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="folder-view-btn"
+            :class="{ 'is-active': folderViewMode === 'list' }"
+            title="列表显示"
+            aria-label="列表显示"
+            :aria-pressed="folderViewMode === 'list'"
+            @click="setFolderViewMode('list')"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+              <circle cx="2.5" cy="6" r=".7" />
+              <circle cx="2.5" cy="12" r=".7" />
+              <circle cx="2.5" cy="18" r=".7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="folder-view-btn"
+            :class="{ 'is-active': folderViewMode === 'details' }"
+            title="详细信息"
+            aria-label="详细信息"
+            :aria-pressed="folderViewMode === 'details'"
+            @click="setFolderViewMode('details')"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+              <path d="M8 4v16" />
+            </svg>
+          </button>
         </div>
       </header>
       <div v-if="folderSelectMode || selectedFolders.length" class="folder-selection-toolbar" role="toolbar" aria-label="文件夹批量操作">
@@ -246,7 +293,7 @@ const handleTileClick = (img: ImageRecord) => {
           <button type="button" class="folder-batch-btn ghost" @click="clearFolderSelection">取消</button>
         </div>
       </div>
-      <div class="folder-grid" :class="`folder-view-${folderViewMode}`">
+      <div class="folder-grid" :class="`folder-grid--${folderViewMode}`">
       <article
         v-for="folder in subfolders"
         :key="folder.id"
