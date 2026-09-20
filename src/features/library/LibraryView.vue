@@ -69,6 +69,7 @@ const {
   handleRenameCurrent,
   handleDeleteCurrent,
   handleToggleFolderVisibility,
+  handleToggleImageVisibility,
   handleBatchRenameFolder,
   handleBatchMoveFolders,
   handleBatchDeleteFolders,
