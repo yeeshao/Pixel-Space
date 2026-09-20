@@ -68,7 +68,7 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/downlo
     const row = await env.DB.prepare(ORIGINAL_SQL).bind(key).first<OriginalImageRow>();
     if (!row) return attachVisitorChallengeCookie(notFound(), challengeResult.challenge);
 
-    const response = await streamTelegramOriginal(env.TG_BOT_TOKEN, row);
+    const response = await streamTelegramOriginal(env.TG_BOT_TOKEN, row, env.DB);
     if (!response) return attachVisitorChallengeCookie(notFound('original_not_archived'), challengeResult.challenge);
 
     clearFailedVisitorCodes(request, challengeResult.challenge);
