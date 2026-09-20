@@ -1254,3 +1254,85 @@
   }
 }
 
+/* ===== 2026-09-20 增量：照片公开/私有状态 + 文件夹管理三按钮固定一行 ===== */
+.image-visibility-badge {
+  position:absolute;
+  top:.55rem;
+  right:.55rem;
+  z-index:3;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.28rem;
+  min-width:3.15rem;
+  height:1.65rem;
+  padding:0 .48rem;
+  border:1px solid rgba(255,255,255,.28);
+  border-radius:999px;
+  background:rgba(7,7,19,.78);
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+  color:white;
+  font-size:.68rem;
+  font-weight:800;
+  line-height:1;
+  box-shadow:0 2px 10px rgba(0,0,0,.24);
+  pointer-events:none;
+}
+.image-visibility-badge svg {
+  width:13px;
+  height:13px;
+  flex:0 0 auto;
+}
+.image-visibility-badge.is-public {
+  border-color:rgba(132,247,153,.72);
+  background:rgba(35,120,58,.82);
+  color:rgb(220,252,231);
+}
+.image-visibility-badge.is-private {
+  border-color:rgba(203,213,225,.46);
+  background:rgba(30,35,48,.88);
+  color:rgb(226,232,240);
+}
+
+/* 覆盖前面多个移动端规则，文件夹管理始终保持三列一行。 */
+.folder-actions-panel .library-actions {
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:.55rem !important;
+  width:100%;
+}
+.folder-actions-panel .library-actions .library-btn {
+  width:100% !important;
+  min-width:0;
+  padding-left:.35rem;
+  padding-right:.35rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+@media (max-width:420px) {
+  .folder-actions-panel .library-actions {
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    gap:.35rem !important;
+  }
+  .folder-actions-panel .library-actions .library-btn {
+    font-size:.68rem;
+    padding-left:.2rem;
+    padding-right:.2rem;
+  }
+  .image-visibility-badge {
+    top:.4rem;
+    right:.4rem;
+    min-width:2.85rem;
+    height:1.5rem;
+    padding:0 .36rem;
+    font-size:.62rem;
+  }
+  .image-visibility-badge svg {
+    width:12px;
+    height:12px;
+  }
+}
+
