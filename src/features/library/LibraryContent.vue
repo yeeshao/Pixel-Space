@@ -340,12 +340,15 @@ const handleTileClick = (img: ImageRecord) => {
         >
           <img :src="img.public_url" :alt="img.title" loading="lazy" draggable="false" @dragstart.prevent />
           <span
-            class="image-visibility-badge"
+            class="image-visibility-badge image-visibility-toggle"
             :class="img.is_public !== 0 ? 'is-public' : 'is-private'"
             :title="img.is_public !== 0 ? '点击设为私有' : '点击设为公开'"
             role="button"
             tabindex="0"
-            @click.stop="emit('toggleImageVisibility', img)"
+            @pointerdown.stop
+            @pointerup.stop
+            @pointercancel.stop
+            @click.stop.prevent="emit('toggleImageVisibility', img)"
             @keydown.enter.stop.prevent="emit('toggleImageVisibility', img)"
             @keydown.space.stop.prevent="emit('toggleImageVisibility', img)"
           >
@@ -440,6 +443,7 @@ const handleTileClick = (img: ImageRecord) => {
 </template>
 
 <style scoped src="./library-view.css"></style>
+
 
 
 
