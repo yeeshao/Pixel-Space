@@ -133,7 +133,9 @@ export const useUploadQueue = (options: UploadQueueOptions = {}) => {
   const processingCount = computed(() => entries.value.filter((entry) => entry.status === 'processing').length);
   const duplicateEntries = computed(() => entries.value.filter((entry) => entry.duplicate));
   const queueCountLabel = computed(() => (hasEntries.value ? `${entries.value.length} 张` : '空'));
-  const canSubmit = computed(() => readyEntries.value.length > 0 && !isBatchUploading.value);
+  const failedEntries = computed(() => entries.value.filter((entry) => entry.status === 'error' && entry.originalHash && entry.compressedFile && entry.compressedDimensions));
+  const canSubmit = computed(() => (readyEntries.value.length > 0 || failedEntries.value.length > 0) && !isBatchUploading.value);
+  const retryCount = computed(() => failedEntries.value.length);
 
   const statusLabel = computed(() => {
     if (globalError.value) return globalError.value;
@@ -145,7 +147,8 @@ export const useUploadQueue = (options: UploadQueueOptions = {}) => {
     if (processingCount.value > 0) return `处理图片中… ${processingCount.value} 张`;
     const dupCount = duplicateEntries.value.length;
     const dupSuffix = dupCount > 0 ? `，跳过 ${dupCount} 张重复` : '';
-    if (canSubmit.value) return `准备就绪，可上传 ${readyEntries.value.length} 张${dupSuffix}`;
+    if (readyEntries.value.length > 0) return `准备就绪，可上传 ${readyEntries.value.length} 张${dupSuffix}`;
+    if (failedEntries.value.length > 0) return `有 ${failedEntries.value.length} 张上传失败，可重试`;
     if (hasEntries.value && doneEntries.value.length === entries.value.length) {
       return dupCount > 0 ? `全部完成（${dupCount} 张已存在）` : '全部上传完成';
     }
@@ -202,6 +205,8 @@ export const useUploadQueue = (options: UploadQueueOptions = {}) => {
     doneEntries,
     processingCount,
     duplicateEntries,
+    failedEntries,
+    retryCount,
     queueCountLabel,
     canSubmit,
     statusLabel,
@@ -212,3 +217,4 @@ export const useUploadQueue = (options: UploadQueueOptions = {}) => {
     taskProgressStatus,
   };
 };
+
