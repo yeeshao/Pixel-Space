@@ -1415,3 +1415,48 @@
 }
 
 
+
+/* 实际文件夹显示方式切换 */
+.content-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.folder-view-switch {
+  display:inline-flex; align-items:center; gap:2px; padding:3px;
+  border:1px solid var(--border-color, rgba(128,128,128,.22));
+  border-radius:8px; background:var(--surface-color, rgba(128,128,128,.08));
+  flex-shrink:0;
+}
+.folder-view-switch button {
+  width:32px; height:30px; border:0; border-radius:6px; background:transparent;
+  cursor:pointer; font-size:17px; line-height:1; opacity:.7;
+}
+.folder-view-switch button:hover, .folder-view-switch button.active {
+  opacity:1; background:var(--hover-color, rgba(128,128,128,.16));
+}
+.folder-grid.folder-view-list {
+  display:flex; flex-direction:column; gap:6px;
+}
+.folder-grid.folder-view-list .folder-card {
+  display:flex; align-items:center; min-height:58px; padding:8px 12px; gap:12px;
+}
+.folder-grid.folder-view-list .folder-icon { flex:0 0 auto; }
+.folder-grid.folder-view-list .folder-body { flex:1; min-width:0; }
+.folder-grid.folder-view-list .folder-meta { margin-left:auto; }
+.folder-grid.folder-view-details {
+  display:flex; flex-direction:column; gap:0;
+  border:1px solid var(--border-color, rgba(128,128,128,.18)); border-radius:10px; overflow:hidden;
+}
+.folder-grid.folder-view-details .folder-card {
+  display:grid; grid-template-columns:40px minmax(180px,2fr) minmax(110px,1fr) minmax(90px,1fr);
+  align-items:center; min-height:48px; padding:6px 12px; border-radius:0;
+  border-bottom:1px solid var(--border-color, rgba(128,128,128,.12));
+}
+.folder-grid.folder-view-details .folder-card:last-child { border-bottom:0; }
+.folder-grid.folder-view-details .folder-body { display:contents; }
+.folder-grid.folder-view-details .folder-name-row { min-width:0; }
+.folder-grid.folder-view-details .folder-meta { margin:0; }
+@media (max-width: 640px) {
+  .folder-grid.folder-view-details .folder-card {
+    grid-template-columns:36px minmax(0,1fr) auto;
+  }
+  .folder-grid.folder-view-details .folder-meta { display:none; }
+}
+
