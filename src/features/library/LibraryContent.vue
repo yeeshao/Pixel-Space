@@ -338,6 +338,21 @@ const handleTileClick = (img: ImageRecord) => {
           @click.exact="handleTileClick(img)"
         >
           <img :src="img.public_url" :alt="img.title" loading="lazy" draggable="false" @dragstart.prevent />
+          <span
+            class="image-visibility-badge"
+            :class="img.is_public !== 0 ? 'is-public' : 'is-private'"
+            :title="img.is_public !== 0 ? '公开照片' : '私有照片'"
+          >
+            <svg v-if="img.is_public !== 0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+              <circle cx="12" cy="12" r="2.5" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="10" rx="2" />
+              <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            </svg>
+            <span>{{ img.is_public !== 0 ? '公开' : '私有' }}</span>
+          </span>
           <span class="image-caption">{{ img.title || img.original_filename }}</span>
           <button
             v-if="!currentReadonly"
@@ -415,3 +430,4 @@ const handleTileClick = (img: ImageRecord) => {
 </template>
 
 <style scoped src="./library-view.css"></style>
+
