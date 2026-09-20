@@ -116,9 +116,29 @@ const replaceImage = (img: ImageRecord) => {
 };
 
 const removeImage = (key: string) => {
+  // 删除大图查看中的当前照片时，不关闭 Lightbox。
+  // 先记录删除前的位置，删除后自动定位到下一张；如果当前已经是最后一张，
+  // 则回到上一张。这样可以连续处理照片，并保持详情面板的展开状态。
+  const itemsBeforeDelete = currentImages.value;
+  const currentIndex = itemsBeforeDelete.findIndex((item) => item.key === key);
+  const nextImage =
+    currentIndex >= 0 && itemsBeforeDelete.length > 1
+      ? itemsBeforeDelete[currentIndex + 1] ?? itemsBeforeDelete[currentIndex - 1]
+      : null;
+
   images.value = images.value.filter((item) => item.key !== key);
-  lightboxOpen.value = false;
-  lightboxImage.value = null;
+
+  if (!nextImage) {
+    // 只有一张照片可供查看时，删除后才关闭大图。
+    lightboxOpen.value = false;
+    lightboxImage.value = null;
+    return;
+  }
+
+  // 保持 lightboxOpen=true，只切换当前图片。
+  // ImageLightbox 本身不会在 props.image 变化时关闭详情面板，
+  // 因此“详细信息”会继续保持展开。
+  lightboxImage.value = nextImage;
 };
 
 onMounted(refreshAll);
@@ -269,5 +289,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped src="./library-view.css"></style>
+
 
 
