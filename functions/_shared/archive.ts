@@ -14,7 +14,7 @@ export const markTelegramArchivePending = async (env: Env, key: string): Promise
 
 export const archiveOriginalAfterUpload = async (env: Env, original: File, key: string, logger?: RequestLogger): Promise<void> => {
   try {
-    if (original.size > 20 * 1024 * 1024) {
+    if (original.size > TELEGRAM_ARCHIVE_PART_BYTES) {
       const parts = await archiveOriginalPartsToTelegram({ token: env.TG_BOT_TOKEN, chatId: env.TG_CHAT_ID, file: original, key });
       for (const part of parts) {
         await env.DB.prepare(`INSERT INTO telegram_archive_parts(image_key,part_index,total_parts,tg_file_id,tg_message_id,tg_chat_id,bytes) VALUES(?,?,?,?,?,?,?)`)
