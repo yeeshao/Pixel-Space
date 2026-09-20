@@ -34,6 +34,15 @@ const props = defineProps<{
 
 const sortMode = defineModel<ImageSortMode>('sortMode', { required: true });
 
+type FolderViewMode = 'grid' | 'list' | 'details';
+const folderViewMode = ref<FolderViewMode>(
+  (localStorage.getItem('pixel-space-folder-view-mode') as FolderViewMode) || 'grid',
+);
+const setFolderViewMode = (mode: FolderViewMode) => {
+  folderViewMode.value = mode;
+  localStorage.setItem('pixel-space-folder-view-mode', mode);
+};
+
 const emit = defineEmits<{
   clearSelection: [];
   deleteGrant: [id: string];
@@ -214,6 +223,14 @@ const handleTileClick = (img: ImageRecord) => {
           <h2>实际文件夹</h2>
           <p>{{ subfolders.length }} 个子文件夹 · 图片数量包含所有下级文件夹</p>
         </div>
+        <div class="folder-view-switch" role="group" aria-label="文件夹显示方式">
+          <button type="button" :class="{ active: folderViewMode === 'grid' }"
+            title="图标显示" aria-label="图标显示" @click="setFolderViewMode('grid')">▦</button>
+          <button type="button" :class="{ active: folderViewMode === 'list' }"
+            title="列表显示" aria-label="列表显示" @click="setFolderViewMode('list')">☷</button>
+          <button type="button" :class="{ active: folderViewMode === 'details' }"
+            title="详细信息" aria-label="详细信息" @click="setFolderViewMode('details')">☰</button>
+        </div>
       </header>
       <div v-if="folderSelectMode || selectedFolders.length" class="folder-selection-toolbar" role="toolbar" aria-label="文件夹批量操作">
         <div class="folder-selection-info">
@@ -229,7 +246,7 @@ const handleTileClick = (img: ImageRecord) => {
           <button type="button" class="folder-batch-btn ghost" @click="clearFolderSelection">取消</button>
         </div>
       </div>
-      <div class="folder-grid">
+      <div class="folder-grid" :class="`folder-view-${folderViewMode}`">
       <article
         v-for="folder in subfolders"
         :key="folder.id"
@@ -443,6 +460,7 @@ const handleTileClick = (img: ImageRecord) => {
 </template>
 
 <style scoped src="./library-view.css"></style>
+
 
 
 
