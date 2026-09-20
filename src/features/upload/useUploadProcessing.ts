@@ -6,7 +6,7 @@ import { reverseGeocodeLocation, type GeocodeRegion } from '@/features/images/ge
 import { checkAdminImageHash, fetchAdminImage } from '@/features/images/images.api';
 import { normalizeExif } from './exif';
 import { previewAiAnnotation } from './ai-preview.api';
-import { retryTelegramArchive, uploadImage } from './upload.api';
+import { retryTelegramArchive, uploadImage, UploadNetworkError } from './upload.api';
 import { buildUploadFormData } from './upload-form';
 import type { UploadDimensions, UploadExif } from './upload.types';
 import { geocodeRegionForCoordinate } from './useUploadPickMap';
@@ -18,6 +18,10 @@ const AI_PREVIEW_RECOMPRESS_BYTES = 768 * 1024;
 const PROCESS_CONCURRENCY = 2;
 const AI_CONCURRENCY = 2;
 const UPLOAD_CONCURRENCY = 2;
+// 网络抖动时不要立即把照片标记为失败：首次请求失败后最多再自动重试 3 次。
+// 如果浏览器已经明确处于离线状态，则暂停等待网络恢复，不消耗重试次数。
+const UPLOAD_MAX_ATTEMPTS = 4;
+const UPLOAD_RETRY_DELAYS_MS = [1500, 3000, 6000];
 const TELEGRAM_ARCHIVE_POLL_ATTEMPTS = 60;
 const TELEGRAM_ARCHIVE_POLL_INTERVAL_MS = 1200;
 
@@ -125,6 +129,27 @@ const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => {
     window.setTimeout(resolve, ms);
   });
+
+const waitForNetwork = async (): Promise<void> => {
+  if (typeof navigator === 'undefined' || navigator.onLine) return;
+
+  await new Promise<void>((resolve) => {
+    const handleOnline = () => {
+      window.removeEventListener('online', handleOnline);
+      resolve();
+    };
+    window.addEventListener('online', handleOnline, { once: true });
+  });
+};
+
+const isRetryableUploadError = (error: unknown): boolean => {
+  if (error instanceof UploadNetworkError) return true;
+  if (!(error instanceof Error)) return false;
+
+  // 保留对 fetch/浏览器网络异常的兼容判断。
+  return error.name === 'TypeError'
+    || /网络|network|fetch|连接|超时|timeout/i.test(error.message);
+};
 
 const runConcurrentEntries = async (
   uploadCandidates: UploadEntry[],
@@ -344,15 +369,33 @@ export const useUploadProcessing = ({
 
     entry.status = 'uploading';
     entry.errorMessage = null;
-    try {
-      const record = await uploadImage(formData);
-      entry.uploadResult = record;
-      entry.status = 'done';
-      if (record.tg_status === 'pending') void watchTelegramArchive(entry, record.key);
-    } catch (error) {
-      entry.errorMessage = (error as Error).message || '上传失败。';
-      entry.status = 'error';
+
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= UPLOAD_MAX_ATTEMPTS; attempt += 1) {
+      // 网络断开时先等待恢复，不让一次断网直接把整张照片判定为失败。
+      await waitForNetwork();
+
+      try {
+        const record = await uploadImage(formData);
+        entry.uploadResult = record;
+        entry.status = 'done';
+        entry.errorMessage = null;
+        if (record.tg_status === 'pending') void watchTelegramArchive(entry, record.key);
+        return;
+      } catch (error) {
+        lastError = error;
+
+        // 非网络类错误（例如权限、参数、文件大小等）无需盲目重复请求。
+        if (!isRetryableUploadError(error) || attempt >= UPLOAD_MAX_ATTEMPTS) break;
+
+        const retryDelay = UPLOAD_RETRY_DELAYS_MS[attempt - 1] ?? UPLOAD_RETRY_DELAYS_MS.at(-1)!;
+        await delay(retryDelay);
+      }
     }
+
+    entry.errorMessage = (lastError as Error)?.message || '上传失败，已达到自动重试次数。';
+    entry.status = 'error';
   };
 
   const retryUploadForCurrent = async () => {
@@ -395,7 +438,18 @@ export const useUploadProcessing = ({
     isBatchUploading.value = true;
     globalError.value = null;
     try {
-      const uploadCandidates = entries.value.filter((entry) => entry.status === 'ready');
+      const readyCandidates = entries.value.filter((entry) => entry.status === 'ready');
+      // 正常上传优先处理 ready；如果当前队列只剩失败项，则一次性重试全部失败照片。
+      const uploadCandidates = readyCandidates.length > 0
+        ? readyCandidates
+        : entries.value.filter(
+          (entry) =>
+            entry.status === 'error'
+            && entry.originalHash
+            && entry.compressedFile
+            && entry.compressedDimensions,
+        );
+
       await runConcurrentEntries(uploadCandidates, UPLOAD_CONCURRENCY, uploadEntry);
     } finally {
       isBatchUploading.value = false;
@@ -412,3 +466,4 @@ export const useUploadProcessing = ({
     submitUploadAll,
   };
 };
+
