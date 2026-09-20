@@ -14,6 +14,7 @@ defineProps<{
   canSubmit: boolean;
   isBatchUploading: boolean;
   readyCount: number;
+  failedCount: number;
 }>();
 
 const batchFolderId = defineModel<string>('batchFolderId', { required: true });
@@ -109,7 +110,13 @@ const emit = defineEmits<{
           :disabled="!canSubmit"
           @click="emit('submit')"
         >
-          {{ isBatchUploading ? '上传中' : `上传 ${readyCount || ''} 张`.trim() }}
+          {{
+            isBatchUploading
+              ? '上传中'
+              : failedCount > 0 && readyCount === 0
+                ? `重试 ${failedCount} 张`
+                : `上传 ${readyCount || ''} 张`.trim()
+          }}
         </button>
       </aside>
     </div>
@@ -117,3 +124,4 @@ const emit = defineEmits<{
 </template>
 
 <style scoped src="./upload-view.css"></style>
+
