@@ -69,7 +69,7 @@ onMounted(load);
         </div>
       </div>
 
-      <div class="mt-5">
+      <div class="">
         <div class="mb-2 flex items-center justify-between gap-2">
           <div class="text-xs font-semibold text-slate-300">最近访问 / 下载 IP（仅控制台可见）</div>
           <div class="text-[0.65rem] text-slate-600">最近 100 条</div>
