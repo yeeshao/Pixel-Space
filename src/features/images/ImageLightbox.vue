@@ -10,7 +10,7 @@ import { useImageLightboxDetails } from './useImageLightboxDetails';
 import { useImageZoom } from './useImageZoom';
 import { useImageLightboxEditForm } from './useImageLightboxEditForm';
 
-const props = defineProps<{ open: boolean; image?: ImageRecord | null }>();
+const props = defineProps<{ open: boolean; image?: ImageRecord | null; adminOriginal?: boolean }>();
 const emit = defineEmits<{ close: []; prev: []; next: []; updated: [image: ImageRecord]; deleted: [key: string] }>();
 
 const {
@@ -102,6 +102,7 @@ const {
   locationEditOpen,
   editSearchRegion,
   editForm,
+  adminOriginal: props.adminOriginal,
 });
 
 const revokeOriginalObjectUrl = () => {
@@ -345,3 +346,4 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped src="./image-lightbox.css"></style>
+
