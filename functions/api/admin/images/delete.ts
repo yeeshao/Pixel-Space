@@ -76,20 +76,16 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
           });
           return { key: row.key, r2Deleted: false };
         }
-        if (row.tg_chat_id && row.tg_message_id) {
-          try {
-            await deleteTelegramMessage({
-              token: env.TG_BOT_TOKEN,
-              chatId: row.tg_chat_id,
-              messageId: row.tg_message_id,
-            });
-          } catch (error) {
-            logger.error('Telegram cleanup failed', {
-              error,
-              context: { key: row.key },
-            });
-          }
+        const partRows = await env.DB.prepare('SELECT tg_file_id,tg_message_id,tg_chat_id FROM telegram_archive_parts WHERE image_key=? ORDER BY part_index ASC').bind(row.key).all<{tg_file_id:string;tg_message_id:number;tg_chat_id:string}>();
+        for (const part of partRows.results ?? []) {
+          try { await deleteTelegramMessage({ token: env.TG_BOT_TOKEN, chatId: part.tg_chat_id, messageId: part.tg_message_id }); }
+          catch (error) { logger.error('Telegram archive part cleanup failed', { error, context: { key: row.key, part: part.tg_file_id } }); }
         }
+        if (row.tg_chat_id && row.tg_message_id) {
+          try { await deleteTelegramMessage({ token: env.TG_BOT_TOKEN, chatId: row.tg_chat_id, messageId: row.tg_message_id }); }
+          catch (error) { logger.error('Telegram cleanup failed', { error, context: { key: row.key } }); }
+        }
+        await env.DB.prepare('DELETE FROM telegram_archive_parts WHERE image_key=?').bind(row.key).run();
         return { key: row.key, r2Deleted: true };
       }),
     );
