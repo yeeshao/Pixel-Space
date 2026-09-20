@@ -33,7 +33,7 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging(
         return notFound();
       }
 
-      const response = await streamTelegramOriginal(env.TG_BOT_TOKEN, row);
+      const response = await streamTelegramOriginal(env.TG_BOT_TOKEN, row, env.DB);
       if (!response) {
         return new Response(JSON.stringify({
           error: 'original_not_archived',
