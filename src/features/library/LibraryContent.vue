@@ -39,12 +39,12 @@ const emit = defineEmits<{
   deleteGrant: [id: string];
   enterFolder: [id: string | null];
   openLightbox: [image: ImageRecord];
-  toggleImageVisibility: [image: ImageRecord];
   selectAllCurrent: [];
   toggleSelection: [key: string];
   dragSelect: [key: string];
   updateGrant: [id: string, expiresAt: string];
   toggleFolderVisibility: [folder: FolderRecord];
+  toggleImageVisibility: [image: ImageRecord];
   renameFolder: [folder: FolderRecord];
   moveFolder: [folder: FolderRecord, targetId: string | null];
   deleteFolder: [folder: FolderRecord];
@@ -340,19 +340,14 @@ const handleTileClick = (img: ImageRecord) => {
         >
           <img :src="img.public_url" :alt="img.title" loading="lazy" draggable="false" @dragstart.prevent />
           <span
-            :role="currentReadonly ? undefined : 'button'"
-            :tabindex="currentReadonly ? undefined : 0"
             class="image-visibility-badge"
-            :class="[
-              'image-visibility-badge',
-              img.is_public !== 0 ? 'is-public' : 'is-private',
-              { 'image-visibility-toggle': !currentReadonly }
-            ]"
-            :title="currentReadonly ? (img.is_public !== 0 ? '公开照片' : '私有照片') : (img.is_public !== 0 ? '点击设为私有' : '点击设为公开')"
-            :aria-label="currentReadonly ? (img.is_public !== 0 ? '公开照片' : '私有照片') : (img.is_public !== 0 ? '当前公开，点击设为私有' : '当前私有，点击设为公开')"
-            @click.stop="!currentReadonly && emit('toggleImageVisibility', img)"
-            @keydown.enter.stop="!currentReadonly && emit('toggleImageVisibility', img)"
-            @keydown.space.prevent.stop="!currentReadonly && emit('toggleImageVisibility', img)"
+            :class="img.is_public !== 0 ? 'is-public' : 'is-private'"
+            :title="img.is_public !== 0 ? '点击设为私有' : '点击设为公开'"
+            role="button"
+            tabindex="0"
+            @click.stop="emit('toggleImageVisibility', img)"
+            @keydown.enter.stop.prevent="emit('toggleImageVisibility', img)"
+            @keydown.space.stop.prevent="emit('toggleImageVisibility', img)"
           >
             <svg v-if="img.is_public !== 0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
