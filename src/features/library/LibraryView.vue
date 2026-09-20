@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, ref } from 'vue';
+import { defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue';
 import TelegramInboxPanel from './TelegramInboxPanel.vue';
 import AppShell from '@/shared/ui/AppShell.vue';
 import LoadingState from '@/shared/ui/LoadingState.vue';
@@ -75,6 +75,7 @@ const {
   handleMove,
   handleBatchDelete,
   handleBatchLocation,
+  handleBatchVisibility,
   handleBatchAi,
   saveAiSettings,
 } = useLibraryActions({
@@ -117,6 +118,34 @@ const removeImage = (key: string) => {
 };
 
 onMounted(refreshAll);
+
+let syncingFolderHistory = false;
+
+const folderHistoryState = (folderId: string | null) => ({
+  pixelSpaceLibraryFolder: folderId,
+});
+
+const navigateFolder = (folderId: string | null) => {
+  if (folderId === currentFolderId.value) return;
+  enterFolder(folderId);
+  window.history.pushState(folderHistoryState(folderId), '', window.location.href);
+};
+
+const onFolderHistoryPop = (event: PopStateEvent) => {
+  const state = event.state as { pixelSpaceLibraryFolder?: string | null } | null;
+  if (!state || !Object.prototype.hasOwnProperty.call(state, 'pixelSpaceLibraryFolder')) return;
+  enterFolder(state.pixelSpaceLibraryFolder ?? null);
+};
+
+onMounted(() => {
+  window.history.replaceState(folderHistoryState(currentFolderId.value), '', window.location.href);
+  window.addEventListener('popstate', onFolderHistoryPop);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('popstate', onFolderHistoryPop);
+});
+
 </script>
 
 <template>
@@ -130,7 +159,7 @@ onMounted(refreshAll);
         :current-folder-id="currentFolderId"
         :current-virtual="currentVirtual"
         :virtual-counts="virtualCounts"
-        @enter-folder="enterFolder"
+        @enter-folder="navigateFolder"
         @create-folder="handleCreateFolder"
         @rename-current="handleRenameCurrent"
         @delete-current="handleDeleteCurrent"
@@ -164,7 +193,7 @@ onMounted(refreshAll);
         :folder-options="folderOptions"
         @update-grant="handleUpdateDownloadGrant"
         @delete-grant="handleDeleteDownloadGrant"
-        @enter-folder="enterFolder"
+        @enter-folder="navigateFolder"
         @select-all-current="selectAllCurrent"
         @clear-selection="clearSelection"
         @toggle-selection="toggleSelection"
@@ -191,6 +220,7 @@ onMounted(refreshAll);
         @move="handleMove"
         @batch-location="batchLocationOpen = true"
         @batch-ai="handleBatchAi"
+        @batch-visibility="handleBatchVisibility"
         @delete="handleBatchDelete"
         @cancel="clearSelection"
       />
@@ -225,3 +255,4 @@ onMounted(refreshAll);
 </template>
 
 <style scoped src="./library-view.css"></style>
+
