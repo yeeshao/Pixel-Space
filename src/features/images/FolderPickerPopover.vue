@@ -343,8 +343,9 @@ onBeforeUnmount(() => {
 .folder-popover {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
-  z-index: 30;
+  left: 0;
+  right: auto;
+  z-index: 100;
   width: clamp(240px, 18rem, 22rem);
   border: 1px solid rgba(53, 243, 255, 0.28);
   border-radius: 8px;
@@ -520,3 +521,4 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+
