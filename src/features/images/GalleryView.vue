@@ -166,6 +166,17 @@ watch(folderFilter, () => {
 const openLightbox = (img: ImageRecord) => {
   lightboxImage.value = img;
   lightboxOpen.value = true;
+
+  // 公开图库列表本身不会触发 /api/image/:key，因此打开大图时主动请求
+  // 公开详情接口，由服务端记录访问次数、访客 IP、User-Agent 和 CF-Ray。
+  // 请求失败不影响大图正常打开。
+  void fetchImage(img.key)
+    .then((freshImage) => {
+      if (lightboxImage.value?.key === img.key) {
+        lightboxImage.value = freshImage;
+      }
+    })
+    .catch(() => undefined);
 };
 
 const showAdjacentImage = (offset: -1 | 1) => {
@@ -174,7 +185,17 @@ const showAdjacentImage = (offset: -1 | 1) => {
   const currentIndex = items.findIndex((item) => item.key === lightboxImage.value?.key);
   if (currentIndex === -1) return;
   const nextIndex = (currentIndex + offset + items.length) % items.length;
-  lightboxImage.value = items[nextIndex];
+  const nextImage = items[nextIndex];
+  lightboxImage.value = nextImage;
+
+  // 左右切换到下一张/上一张时同样记录一次公开访问。
+  void fetchImage(nextImage.key)
+    .then((freshImage) => {
+      if (lightboxImage.value?.key === nextImage.key) {
+        lightboxImage.value = freshImage;
+      }
+    })
+    .catch(() => undefined);
 };
 
 const showPreviousImage = () => showAdjacentImage(-1);
@@ -551,4 +572,5 @@ const clearSearch = async () => {
 }
 
 </style>
+
 
