@@ -91,55 +91,35 @@ router.beforeEach(async (to) => {
   return { name: 'login', query: { redirect: to.fullPath } };
 });
 
-let sitePresenceActive = false;
-
-const sendSitePresence = (action: 'enter' | 'leave') => {
-  const body = JSON.stringify({ action });
-
-  // sendBeacon is reliable during tab close/navigation. Fall back to fetch
-  // for browsers where Beacon is unavailable.
-  if (action === 'leave' && typeof navigator !== 'undefined' && navigator.sendBeacon) {
-    navigator.sendBeacon(
-      '/api/visit',
-      new Blob([body], { type: 'application/json' }),
-    );
-    return;
-  }
-
-  void fetch('/api/visit', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body,
-    keepalive: true,
-  }).catch(() => undefined);
-};
+// 防止 Vue Router 在同一次页面初始化/同一次导航过程中重复触发 afterEach，
+// 从而导致一次刷新被统计为 2 次访问。
+// 页面真正刷新后模块会重新加载，所以刷新一次仍会正常 +1。
+let lastVisitPath = '';
+let lastVisitAt = 0;
 
 router.afterEach((to) => {
   document.title = `${String(to.meta.title ?? 'Pixel Space')} · Pixel Space`;
 
-  // A visitor gets one active presence record per IP. Route changes inside
-  // the SPA do not create a new entry; pagehide closes the current visit.
-  if (!to.meta.requiresAdmin && to.name !== 'login' && !sitePresenceActive) {
-    sitePresenceActive = true;
-    sendSitePresence('enter');
+  // 统计网页访问次数，而不是照片访问次数。
+  // 只统计公开页面，管理员控制台/上传页不会进入网站公开访问数。
+  if (!to.meta.requiresAdmin && to.name !== 'login') {
+    const now = Date.now();
+    const path = to.fullPath;
+
+    // 同一路径在 1500ms 内重复完成导航时只记 1 次。
+    // 这能过滤初始化阶段的重复 afterEach，但不会影响真正刷新页面：
+    // 刷新后 JS 上下文重建，lastVisitPath / lastVisitAt 会重新初始化。
+    if (path === lastVisitPath && now - lastVisitAt < 1500) return;
+
+    lastVisitPath = path;
+    lastVisitAt = now;
+
+    void fetch('/api/visit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      keepalive: true,
+    }).catch(() => undefined);
   }
 });
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('pagehide', () => {
-    if (!sitePresenceActive) return;
-    sitePresenceActive = false;
-    sendSitePresence('leave');
-  });
-
-  window.addEventListener('pageshow', () => {
-    if (sitePresenceActive) return;
-    const current = router.currentRoute.value;
-    if (!current.meta.requiresAdmin && current.name !== 'login') {
-      sitePresenceActive = true;
-      sendSitePresence('enter');
-    }
-  });
-}
 
 export default router;
