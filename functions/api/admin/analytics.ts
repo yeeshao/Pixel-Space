@@ -3,11 +3,10 @@ import { json, serverError, unauthorized } from '../../_shared/http';
 import { withRequestLogging } from '../../_shared/logger';
 import { resolveAdmin } from '../../_shared/auth';
 
-const RECENT_EVENTS_SQL = `
-SELECT e.id, e.image_key, i.original_filename, e.event, e.ip, e.user_agent, e.cf_ray, e.created_at
-FROM analytics_events e
-LEFT JOIN images i ON i.key = e.image_key
-ORDER BY e.id DESC
+const VISITOR_PRESENCE_SQL = `
+SELECT ip, first_seen_at, last_seen_at, user_agent, cf_ray, last_event
+FROM visitor_presence
+ORDER BY last_seen_at DESC
 LIMIT 100
 `;
 
@@ -36,22 +35,20 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
       download_count: number;
     }>();
 
-    const recent = await env.DB.prepare(RECENT_EVENTS_SQL).all<{
-      id: number;
-      image_key: string;
-      original_filename: string | null;
-      event: 'view' | 'download';
+    const visitors = await env.DB.prepare(VISITOR_PRESENCE_SQL).all<{
       ip: string;
+      first_seen_at: string;
+      last_seen_at: string;
       user_agent: string | null;
       cf_ray: string | null;
-      created_at: string;
+      last_event: 'view' | 'download';
     }>();
 
     return json({
       views: Number(totals?.views ?? 0),
       downloads: Number(totals?.downloads ?? 0),
       top: top.results ?? [],
-      recent: recent.results ?? [],
+      visitors: visitors.results ?? [],
     });
   } catch (error) {
     logger.error('GET /api/admin/analytics failed', { error });
