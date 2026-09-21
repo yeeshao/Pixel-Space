@@ -4,7 +4,7 @@ import AppShell from '@/shared/ui/AppShell.vue';
 import type { ImageRecord } from '@/features/images/image.types';
 import { buildImageLinkRows } from '@/features/images/image-links';
 import { paletteFromImage, parseDominantColor, tagsFromImage } from '@/features/images/image-meta';
-import { listImages } from '@/features/images/images.api';
+import { fetchImage, listImages } from '@/features/images/images.api';
 import ReadOnlyMap from '@/features/images/ReadOnlyMap.vue';
 import { useClipboardFeedback } from '@/features/images/useClipboardFeedback';
 import { useImageZoom } from '@/features/images/useImageZoom';
@@ -57,7 +57,18 @@ const refresh = async () => {
     if (images.value.length === 0) {
       images.value = await listImages();
     }
-    image.value = pickRandomImage(images.value, image.value?.key ?? null);
+    const picked = pickRandomImage(images.value, image.value?.key ?? null);
+    image.value = picked;
+
+    if (picked) {
+      // 随机页直接从列表取图，不会经过 /api/image/:key；
+      // 用详情接口补记一次真实访客访问。
+      try {
+        image.value = await fetchImage(picked.key);
+      } catch {
+        // 统计失败不应影响随机图片展示。
+      }
+    }
   } catch (e) {
     loadError.value = (e as Error).message;
   } finally {
@@ -821,3 +832,4 @@ onUnmounted(() => {
   }
 }
 </style>
+
