@@ -5,15 +5,13 @@ import { fetchJson } from '@/shared/api/http';
 interface AnalyticsResponse {
   views: number;
   downloads: number;
-  recent: Array<{
-    id: number;
-    image_key: string;
-    original_filename: string | null;
-    event: 'view' | 'download';
+  visitors: Array<{
     ip: string;
+    first_seen_at: string;
+    last_seen_at: string;
     user_agent: string | null;
     cf_ray: string | null;
-    created_at: string;
+    last_event: 'view' | 'download';
   }>;
 }
 
@@ -41,7 +39,7 @@ onMounted(load);
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <div>
         <div class="text-sm font-semibold text-white">访问与下载统计</div>
-        <div class="mt-1 text-xs text-slate-500">统计固定放在控制台最后；公开页面只显示数量，IP / User-Agent / CF-Ray 仅管理员可见。</div>
+        <div class="mt-1 text-xs text-slate-500">统计固定放在控制台最后；公开页面只显示数量，IP / User-Agent / CF-Ray 仅管理员可见。同一 IP 只保留一条记录，重复访问仅更新最后在线时间。</div>
       </div>
       <button
         type="button"
@@ -69,36 +67,36 @@ onMounted(load);
         </div>
       </div>
 
-      <div class="">
+      <div>
         <div class="mb-2 flex items-center justify-between gap-2">
-          <div class="text-xs font-semibold text-slate-300">最近访问 / 下载 IP（仅控制台可见）</div>
-          <div class="text-[0.65rem] text-slate-600">最近 100 条</div>
+          <div class="text-xs font-semibold text-slate-300">访客 IP 在线记录（同 IP 自动去重）</div>
+          <div class="text-[0.65rem] text-slate-600">最近在线 100 个 IP</div>
         </div>
-        <div v-if="stats?.recent.length" class="max-h-80 overflow-auto rounded-lg border border-white/5">
-          <table class="w-full min-w-[860px] text-left text-xs">
+        <div v-if="stats?.visitors.length" class="max-h-80 overflow-auto rounded-lg border border-white/5">
+          <table class="w-full min-w-[760px] text-left text-xs">
             <thead class="sticky top-0 bg-[#090916] text-slate-500">
               <tr class="border-b border-white/5">
-                <th class="px-2 py-2 font-medium">时间</th>
-                <th class="px-2 py-2 font-medium">类型</th>
                 <th class="px-2 py-2 font-medium">IP</th>
-                <th class="px-2 py-2 font-medium">照片</th>
+                <th class="px-2 py-2 font-medium">首次在线</th>
+                <th class="px-2 py-2 font-medium">最后在线</th>
+                <th class="px-2 py-2 font-medium">最近行为</th>
                 <th class="px-2 py-2 font-medium">User-Agent</th>
                 <th class="px-2 py-2 font-medium">CF-Ray</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="event in stats.recent" :key="event.id" class="border-b border-white/[0.03] text-slate-300">
-                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{{ event.created_at }}</td>
-                <td class="px-2 py-2">{{ event.event === 'view' ? '访问' : '下载' }}</td>
-                <td class="whitespace-nowrap px-2 py-2 font-mono text-neon-cyan">{{ event.ip }}</td>
-                <td class="max-w-[240px] truncate px-2 py-2">{{ event.original_filename || event.image_key }}</td>
-                <td class="max-w-[420px] truncate px-2 py-2 text-slate-500">{{ event.user_agent || '—' }}</td>
-                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{{ event.cf_ray || '—' }}</td>
+              <tr v-for="visitor in stats.visitors" :key="visitor.ip" class="border-b border-white/[0.03] text-slate-300">
+                <td class="whitespace-nowrap px-2 py-2 font-mono text-neon-cyan">{{ visitor.ip }}</td>
+                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{{ visitor.first_seen_at }}</td>
+                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-300">{{ visitor.last_seen_at }}</td>
+                <td class="px-2 py-2">{{ visitor.last_event === 'view' ? '访问' : '下载' }}</td>
+                <td class="max-w-[420px] truncate px-2 py-2 text-slate-500">{{ visitor.user_agent || '—' }}</td>
+                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{{ visitor.cf_ray || '—' }}</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p v-else class="rounded-lg border border-white/5 px-3 py-4 text-xs text-slate-500">暂无访问记录。打开一张公开照片或执行一次公开下载后刷新这里即可看到 IP。</p>
+        <p v-else class="rounded-lg border border-white/5 px-3 py-4 text-xs text-slate-500">暂无访客在线记录。打开一张公开照片或执行一次公开下载后刷新这里即可看到 IP。</p>
       </div>
     </template>
   </section>
