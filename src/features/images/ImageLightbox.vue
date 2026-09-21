@@ -349,4 +349,3 @@ onBeforeUnmount(() => {
 
 <style scoped src="./image-lightbox.css"></style>
 
-
