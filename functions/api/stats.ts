@@ -15,7 +15,7 @@ SELECT
   COUNT(*) AS photos,
   COALESCE(SUM(bytes_compressed), 0) AS storage_bytes,
   COALESCE(COUNT(DISTINCT CASE WHEN location_name IS NOT NULL AND location_public = 1 THEN location_name END), 0) AS places,
-  COALESCE(SUM(view_count), 0) AS views,
+  COALESCE((SELECT page_views FROM site_stats WHERE id = 1), 0) AS views,
   COALESCE(SUM(download_count), 0) AS downloads
 FROM images
 WHERE is_public = 1

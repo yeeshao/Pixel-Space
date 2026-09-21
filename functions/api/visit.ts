@@ -1,19 +1,18 @@
 import type { Env } from '../types';
 import { json, serverError } from '../_shared/http';
 import { withRequestLogging } from '../_shared/logger';
-import { recordSiteVisit, type SiteVisitAction } from '../_shared/analytics';
 
-export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/visit', async ({ env, request, waitUntil }, logger) => {
+// 统计网站公开页面访问次数。
+// 这里不修改 images.view_count，照片访问次数仍由公开图片详情接口单独统计，
+// 并继续只在控制台显示。
+export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/visit', async ({ env }, logger) => {
   try {
-    const body = await request.json().catch(() => ({})) as { action?: SiteVisitAction };
-    const action: SiteVisitAction = body.action === 'leave' ? 'leave' : 'enter';
+    await env.DB.prepare(`
+      INSERT INTO site_stats (id, page_views)
+      VALUES (1, 1)
+      ON CONFLICT(id) DO UPDATE SET page_views = page_views + 1
+    `).run();
 
-    const task = recordSiteVisit(env.DB, request, logger, action);
-    if (typeof waitUntil === 'function') {
-      waitUntil(task);
-    } else {
-      await task;
-    }
     return json({ ok: true });
   } catch (error) {
     logger.error('POST /api/visit failed', { error });

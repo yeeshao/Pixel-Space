@@ -133,7 +133,7 @@ onMounted(async () => {
             <div class="stat-cell">
               <dt class="stat-label">访问</dt>
               <dd class="stat-value">{{ viewsLabel }}</dd>
-              <p class="stat-hint">公开照片总访问次数</p>
+              <p class="stat-hint">网页访问次数</p>
             </div>
             <div class="stat-cell">
               <dt class="stat-label">下载</dt>
