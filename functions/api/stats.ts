@@ -31,7 +31,8 @@ WHERE is_public = 1
         SELECT id, parent_id, is_public FROM folders WHERE id = images.folder_id
         UNION ALL
         SELECT f.id, f.parent_id, f.is_public
-        FROM folders f JOIN ancestors a ON f.id = a.parent_id
+        FROM folders f
+        JOIN ancestors a ON f.id = a.parent_id
       )
       SELECT 1 FROM ancestors WHERE is_public != 1 LIMIT 1
     )
@@ -56,6 +57,17 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/stats',
       env.DB.prepare(LATEST_SQL).all<ImageRow>(),
     ]);
 
+    // 访客数按 analytics_events 中的唯一 IP 统计；统计失败不影响首页其它内容。
+    let visitors = 0;
+    try {
+      const visitorRow = await env.DB
+        .prepare(`SELECT COUNT(DISTINCT ip) AS visitors FROM analytics_events WHERE ip IS NOT NULL AND ip != ''`)
+        .first<{ visitors: number }>();
+      visitors = Number(visitorRow?.visitors ?? 0);
+    } catch (visitorError) {
+      logger.warn('GET /api/stats visitor count failed', { error: visitorError });
+    }
+
     const latestRecords = (latest.results ?? []).map((row) => {
       const record = rowToRecord(row, env.PUBLIC_BASE_URL);
       return isAdmin ? record : scrubRecordForVisitor(record);
@@ -67,6 +79,7 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/stats',
       places: summary?.places ?? 0,
       views: summary?.views ?? 0,
       downloads: summary?.downloads ?? 0,
+      visitors,
       latest: latestRecords,
     });
   } catch (error) {
