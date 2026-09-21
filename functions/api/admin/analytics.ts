@@ -36,6 +36,23 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
       download_count: number;
     }>();
 
+    const visitors = await env.DB.prepare(`
+      SELECT ip, entered_at, left_at, user_agent, cf_ray
+      FROM visitor_presence
+      ORDER BY COALESCE(entered_at, first_seen_at) DESC
+      LIMIT 100
+    `).all<{
+      ip: string;
+      entered_at: string | null;
+      left_at: string | null;
+      user_agent: string | null;
+      cf_ray: string | null;
+    }>();
+
+    const siteStats = await env.DB.prepare(`
+      SELECT page_views FROM site_stats WHERE id = 1
+    `).first<{ page_views: number }>();
+
     const recent = await env.DB.prepare(RECENT_EVENTS_SQL).all<{
       id: number;
       image_key: string;
@@ -50,6 +67,8 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
     return json({
       views: Number(totals?.views ?? 0),
       downloads: Number(totals?.downloads ?? 0),
+      pageViews: Number(siteStats?.page_views ?? 0),
+      visitors: visitors.results ?? [],
       top: top.results ?? [],
       recent: recent.results ?? [],
     });

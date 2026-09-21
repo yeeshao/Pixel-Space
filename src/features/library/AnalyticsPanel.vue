@@ -5,6 +5,14 @@ import { fetchJson } from '@/shared/api/http';
 interface AnalyticsResponse {
   views: number;
   downloads: number;
+  pageViews: number;
+  visitors: Array<{
+    ip: string;
+    entered_at: string | null;
+    left_at: string | null;
+    user_agent: string | null;
+    cf_ray: string | null;
+  }>;
   recent: Array<{
     id: number;
     image_key: string;
@@ -20,6 +28,22 @@ interface AnalyticsResponse {
 const stats = ref<AnalyticsResponse | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+
+const formatChinaTime = (value: string | null) => {
+  if (!value) return '在线';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date).replace(/\//g, '-');
+};
 
 const load = async () => {
   loading.value = true;
@@ -71,34 +95,34 @@ onMounted(load);
 
       <div class="">
         <div class="mb-2 flex items-center justify-between gap-2">
-          <div class="text-xs font-semibold text-slate-300">最近访问 / 下载 IP（仅控制台可见）</div>
-          <div class="text-[0.65rem] text-slate-600">最近 100 条</div>
+          <div class="text-xs font-semibold text-slate-300">IP 访问记录（仅控制台可见）</div>
+          <div class="text-[0.65rem] text-slate-600">每个 IP 一条记录</div>
         </div>
-        <div v-if="stats?.recent.length" class="max-h-80 overflow-auto rounded-lg border border-white/5">
-          <table class="w-full min-w-[860px] text-left text-xs">
+        <div v-if="stats?.visitors.length" class="max-h-80 overflow-auto rounded-lg border border-white/5">
+          <table class="w-full min-w-[760px] text-left text-xs">
             <thead class="sticky top-0 bg-[#090916] text-slate-500">
               <tr class="border-b border-white/5">
-                <th class="px-2 py-2 font-medium">时间</th>
-                <th class="px-2 py-2 font-medium">类型</th>
                 <th class="px-2 py-2 font-medium">IP</th>
-                <th class="px-2 py-2 font-medium">照片</th>
+                <th class="px-2 py-2 font-medium">进入时间（上海）</th>
+                <th class="px-2 py-2 font-medium">离开时间（上海）</th>
                 <th class="px-2 py-2 font-medium">User-Agent</th>
                 <th class="px-2 py-2 font-medium">CF-Ray</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="event in stats.recent" :key="event.id" class="border-b border-white/[0.03] text-slate-300">
-                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{{ event.created_at }}</td>
-                <td class="px-2 py-2">{{ event.event === 'view' ? '访问' : '下载' }}</td>
-                <td class="whitespace-nowrap px-2 py-2 font-mono text-neon-cyan">{{ event.ip }}</td>
-                <td class="max-w-[240px] truncate px-2 py-2">{{ event.original_filename || event.image_key }}</td>
-                <td class="max-w-[420px] truncate px-2 py-2 text-slate-500">{{ event.user_agent || '—' }}</td>
-                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{{ event.cf_ray || '—' }}</td>
+              <tr v-for="visitor in stats.visitors" :key="visitor.ip" class="border-b border-white/[0.03] text-slate-300">
+                <td class="whitespace-nowrap px-2 py-2 font-mono text-neon-cyan">{{ visitor.ip }}</td>
+                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-400">{{ formatChinaTime(visitor.entered_at) }}</td>
+                <td class="whitespace-nowrap px-2 py-2 font-mono" :class="visitor.left_at ? 'text-slate-400' : 'text-emerald-300'">
+                  {{ formatChinaTime(visitor.left_at) }}
+                </td>
+                <td class="max-w-[420px] truncate px-2 py-2 text-slate-500">{{ visitor.user_agent || '—' }}</td>
+                <td class="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{{ visitor.cf_ray || '—' }}</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p v-else class="rounded-lg border border-white/5 px-3 py-4 text-xs text-slate-500">暂无访问记录。打开一张公开照片或执行一次公开下载后刷新这里即可看到 IP。</p>
+        <p v-else class="rounded-lg border border-white/5 px-3 py-4 text-xs text-slate-500">暂无 IP 访问记录。</p>
       </div>
     </template>
   </section>

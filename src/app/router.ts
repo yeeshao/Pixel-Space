@@ -91,18 +91,55 @@ router.beforeEach(async (to) => {
   return { name: 'login', query: { redirect: to.fullPath } };
 });
 
+let sitePresenceActive = false;
+
+const sendSitePresence = (action: 'enter' | 'leave') => {
+  const body = JSON.stringify({ action });
+
+  // sendBeacon is reliable during tab close/navigation. Fall back to fetch
+  // for browsers where Beacon is unavailable.
+  if (action === 'leave' && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+    navigator.sendBeacon(
+      '/api/visit',
+      new Blob([body], { type: 'application/json' }),
+    );
+    return;
+  }
+
+  void fetch('/api/visit', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body,
+    keepalive: true,
+  }).catch(() => undefined);
+};
+
 router.afterEach((to) => {
   document.title = `${String(to.meta.title ?? 'Pixel Space')} · Pixel Space`;
 
-  // 统计网页访问次数，而不是照片访问次数。
-  // 只统计公开页面，管理员控制台/上传页不会进入网站公开访问数。
-  if (!to.meta.requiresAdmin && to.name !== 'login') {
-    void fetch('/api/visit', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      keepalive: true,
-    }).catch(() => undefined);
+  // A visitor gets one active presence record per IP. Route changes inside
+  // the SPA do not create a new entry; pagehide closes the current visit.
+  if (!to.meta.requiresAdmin && to.name !== 'login' && !sitePresenceActive) {
+    sitePresenceActive = true;
+    sendSitePresence('enter');
   }
 });
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    if (!sitePresenceActive) return;
+    sitePresenceActive = false;
+    sendSitePresence('leave');
+  });
+
+  window.addEventListener('pageshow', () => {
+    if (sitePresenceActive) return;
+    const current = router.currentRoute.value;
+    if (!current.meta.requiresAdmin && current.name !== 'login') {
+      sitePresenceActive = true;
+      sendSitePresence('enter');
+    }
+  });
+}
 
 export default router;
