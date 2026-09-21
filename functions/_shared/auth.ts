@@ -233,10 +233,32 @@ export const createAdminSession = async (
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = new Date((now + SESSION_TTL_SECONDS) * 1000).toISOString();
 
-  await env.DB.prepare(
-    `INSERT INTO admin_sessions (token_hash, email, expires_at, created_at)
-     VALUES (?, ?, ?, datetime('now'))`,
-  ).bind(tokenHash, identity.email, expiresAt).run();
+  try {
+    await env.DB.prepare(
+      `INSERT INTO admin_sessions (token_hash, email, expires_at, created_at)
+       VALUES (?, ?, ?, datetime('now'))`,
+    ).bind(tokenHash, identity.email, expiresAt).run();
+  } catch (error) {
+    // Some existing deployments have the password-login code but missed the
+    // admin_sessions migration. Create the tiny session table on demand and
+    // retry once. This does not change the authentication policy.
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS admin_sessions (
+        token_hash TEXT PRIMARY KEY NOT NULL,
+        email TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `).run();
+    await env.DB.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at
+      ON admin_sessions (expires_at)
+    `).run();
+    await env.DB.prepare(
+      `INSERT INTO admin_sessions (token_hash, email, expires_at, created_at)
+       VALUES (?, ?, ?, datetime('now'))`,
+    ).bind(tokenHash, identity.email, expiresAt).run();
+  }
 
   // 每次登录顺便清理过期 session，避免表无限增长。
   await env.DB.prepare(`DELETE FROM admin_sessions WHERE expires_at <= ?`)
@@ -257,11 +279,16 @@ export const resolvePasswordSession = async (
 
   const tokenHash = await hashSessionToken(token);
   const now = new Date().toISOString();
-  const row = await env.DB.prepare(
-    `SELECT email FROM admin_sessions WHERE token_hash = ? AND expires_at > ? LIMIT 1`,
-  ).bind(tokenHash, now).first<{ email: string }>();
+  try {
+    const row = await env.DB.prepare(
+      `SELECT email FROM admin_sessions WHERE token_hash = ? AND expires_at > ? LIMIT 1`,
+    ).bind(tokenHash, now).first<{ email: string }>();
 
-  return row?.email ? { email: row.email } : null;
+    return row?.email ? { email: row.email } : null;
+  } catch {
+    // 兼容尚未执行 admin_sessions 迁移的数据库。
+    return null;
+  }
 };
 
 export const deleteAdminSession = async (request: Request, env: Env): Promise<void> => {
@@ -270,7 +297,11 @@ export const deleteAdminSession = async (request: Request, env: Env): Promise<vo
   const token = getCookie(request, cookieName);
   if (!token) return;
   const tokenHash = await hashSessionToken(token);
-  await env.DB.prepare(`DELETE FROM admin_sessions WHERE token_hash = ?`).bind(tokenHash).run();
+  try {
+    await env.DB.prepare(`DELETE FROM admin_sessions WHERE token_hash = ?`).bind(tokenHash).run();
+  } catch {
+    // Session table may not exist on an older deployment.
+  }
 };
 
 export const adminSessionCookie = (request: Request, token: string): string => {
@@ -312,3 +343,4 @@ export const resolveAdmin = async (request: Request, env: Env): Promise<AdminIde
   const role = headerRole || envRole || 'admin';
   return role === 'visitor' ? null : { email: DEV_ADMIN_EMAIL };
 };
+
