@@ -3,10 +3,11 @@ import { json, serverError, unauthorized } from '../../_shared/http';
 import { withRequestLogging } from '../../_shared/logger';
 import { resolveAdmin } from '../../_shared/auth';
 
-const VISITOR_PRESENCE_SQL = `
-SELECT ip, first_seen_at, last_seen_at, user_agent, cf_ray, last_event
-FROM visitor_presence
-ORDER BY last_seen_at DESC
+const RECENT_EVENTS_SQL = `
+SELECT e.id, e.image_key, i.original_filename, e.event, e.ip, e.user_agent, e.cf_ray, e.created_at
+FROM analytics_events e
+LEFT JOIN images i ON i.key = e.image_key
+ORDER BY e.id DESC
 LIMIT 100
 `;
 
@@ -23,13 +24,20 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
   try {
     const totals = await env.DB.prepare(`
       SELECT
+        COALESCE(SUM(view_count), 0) AS views,
         COALESCE(SUM(download_count), 0) AS downloads
       FROM images
-    `).first<{ downloads: number }>();
+    `).first<{ views: number; downloads: number }>();
 
-    const siteStats = await env.DB
-      .prepare('SELECT page_views FROM site_stats WHERE id = 1')
-      .first<{ page_views: number }>();
+    let visitors = 0;
+    try {
+      const visitorRow = await env.DB
+        .prepare(`SELECT COUNT(DISTINCT ip) AS visitors FROM analytics_events WHERE ip IS NOT NULL AND ip != ''`)
+        .first<{ visitors: number }>();
+      visitors = Number(visitorRow?.visitors ?? 0);
+    } catch (visitorError) {
+      logger.warn('GET /api/admin/analytics visitor count failed', { error: visitorError });
+    }
 
     const top = await env.DB.prepare(TOP_SQL).all<{
       key: string;
@@ -38,20 +46,23 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
       download_count: number;
     }>();
 
-    const visitors = await env.DB.prepare(VISITOR_PRESENCE_SQL).all<{
+    const recent = await env.DB.prepare(RECENT_EVENTS_SQL).all<{
+      id: number;
+      image_key: string;
+      original_filename: string | null;
+      event: 'view' | 'download';
       ip: string;
-      first_seen_at: string;
-      last_seen_at: string;
       user_agent: string | null;
       cf_ray: string | null;
-      last_event: 'view' | 'download';
+      created_at: string;
     }>();
 
     return json({
-      views: Number(siteStats?.page_views ?? 0),
+      views: Number(totals?.views ?? 0),
       downloads: Number(totals?.downloads ?? 0),
+      visitors,
       top: top.results ?? [],
-      visitors: visitors.results ?? [],
+      recent: recent.results ?? [],
     });
   } catch (error) {
     logger.error('GET /api/admin/analytics failed', { error });
