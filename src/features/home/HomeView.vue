@@ -12,7 +12,6 @@ interface StatsResponse {
   places: number;
   views: number;
   downloads: number;
-  visitors: number;
   latest: ImageRecord[];
 }
 
@@ -32,7 +31,6 @@ const storageLabel = computed(() => (stats.value ? formatBytes(stats.value.stora
 const placesLabel = computed(() => (stats.value ? formatNumber(stats.value.places) : '--'));
 const viewsLabel = computed(() => (stats.value ? formatNumber(stats.value.views) : '--'));
 const downloadsLabel = computed(() => (stats.value ? formatNumber(stats.value.downloads) : '--'));
-const visitorsLabel = computed(() => (stats.value ? formatNumber(stats.value.visitors) : '--'));
 
 const latest = computed(() => stats.value?.latest ?? []);
 
@@ -131,7 +129,7 @@ onMounted(async () => {
               <p class="stat-hint">点亮的地点</p>
             </div>
           </dl>
-          <dl class="grid grid-cols-3 gap-3 sm:gap-5">
+          <dl class="grid grid-cols-2 gap-3 sm:gap-5">
             <div class="stat-cell">
               <dt class="stat-label">访问</dt>
               <dd class="stat-value">{{ viewsLabel }}</dd>
@@ -141,11 +139,6 @@ onMounted(async () => {
               <dt class="stat-label">下载</dt>
               <dd class="stat-value">{{ downloadsLabel }}</dd>
               <p class="stat-hint">公开原图总下载次数</p>
-            </div>
-            <div class="stat-cell">
-              <dt class="stat-label">访客</dt>
-              <dd class="stat-value">{{ visitorsLabel }}</dd>
-              <p class="stat-hint">去重 IP 访客数量</p>
             </div>
           </dl>
         </div>
@@ -171,10 +164,10 @@ onMounted(async () => {
             :to="`/p/${encodeURIComponent(item.key)}`"
             class="latest-card"
           >
-            <img :src="item.public_url || '''" :alt="item.title || item.original_filename || '图片'" loading="lazy" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'" />
+            <img :src="item.public_url" :alt="item.title || item.original_filename" loading="lazy" />
             <div class="latest-overlay">
               <span class="latest-title">{{ item.title || item.original_filename }}</span>
-              <span class="latest-meta">{{ item.width || '?' }} × {{ item.height || '?' }} · {{ item.format ? item.format.toUpperCase() : 'IMAGE' }}</span>
+              <span class="latest-meta">{{ item.width }} × {{ item.height }} · {{ item.format.toUpperCase() }}</span>
             </div>
           </RouterLink>
         </div>
