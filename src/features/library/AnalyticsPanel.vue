@@ -5,7 +5,6 @@ import { fetchJson } from '@/shared/api/http';
 interface AnalyticsResponse {
   views: number;
   downloads: number;
-  visitors: number;
   recent: Array<{
     id: number;
     image_key: string;
@@ -59,7 +58,7 @@ onMounted(load);
     </div>
 
     <template v-else>
-      <div class="grid grid-cols-2 gap-3 sm:max-w-lg">
+      <div class="grid grid-cols-2 gap-3 sm:max-w-md">
         <div class="rounded-lg border border-white/5 bg-white/[0.03] p-3">
           <div class="text-xs text-slate-500">公开总访问</div>
           <div class="mt-1 font-mono text-xl font-bold text-neon-cyan">{{ (stats?.views ?? 0).toLocaleString() }}</div>
@@ -67,10 +66,6 @@ onMounted(load);
         <div class="rounded-lg border border-white/5 bg-white/[0.03] p-3">
           <div class="text-xs text-slate-500">公开总下载</div>
           <div class="mt-1 font-mono text-xl font-bold text-neon-pink">{{ (stats?.downloads ?? 0).toLocaleString() }}</div>
-        </div>
-        <div class="rounded-lg border border-white/5 bg-white/[0.03] p-3">
-          <div class="text-xs text-slate-500">访客数量</div>
-          <div class="mt-1 font-mono text-xl font-bold text-neon-cyan">{{ (stats?.visitors ?? 0).toLocaleString() }}</div>
         </div>
       </div>
 
@@ -108,3 +103,4 @@ onMounted(load);
     </template>
   </section>
 </template>
+
