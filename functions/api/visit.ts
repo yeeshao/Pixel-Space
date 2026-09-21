@@ -1,19 +1,25 @@
 import type { Env } from '../types';
 import { json, serverError } from '../_shared/http';
 import { withRequestLogging } from '../_shared/logger';
+import { recordSiteVisit } from '../_shared/analytics';
 
-// 统计网站公开页面访问次数。
-// 这里不修改 images.view_count，照片访问次数仍由公开图片详情接口单独统计，
-// 并继续只在控制台显示。
-export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/visit', async ({ env }, logger) => {
+export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/visit', async ({ env, request, waitUntil }, logger) => {
   try {
-    await env.DB.prepare(`
-      INSERT INTO site_stats (id, page_views)
-      VALUES (1, 1)
-      ON CONFLICT(id) DO UPDATE SET page_views = page_views + 1
-    `).run();
+    const task = recordSiteVisit(env.DB, request, logger);
 
-    return json({ ok: true });
+    // The session cookie must be returned in the HTTP response. Do not defer
+    // this part with waitUntil, otherwise the browser cannot establish the
+    // session before the next SPA navigation/refresh.
+    const result = await task;
+    return json(
+      { ok: true, counted: result.counted },
+      200,
+      result.counted
+        ? {
+            'Set-Cookie': `ps_visit_session=${encodeURIComponent(result.sessionCookie)}; Path=/; SameSite=Lax; HttpOnly`,
+          }
+        : undefined,
+    );
   } catch (error) {
     logger.error('POST /api/visit failed', { error });
     return serverError('visit_failed');
