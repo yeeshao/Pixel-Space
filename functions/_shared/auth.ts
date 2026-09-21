@@ -312,4 +312,3 @@ export const resolveAdmin = async (request: Request, env: Env): Promise<AdminIde
   const role = headerRole || envRole || 'admin';
   return role === 'visitor' ? null : { email: DEV_ADMIN_EMAIL };
 };
-
