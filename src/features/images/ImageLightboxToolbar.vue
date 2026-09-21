@@ -8,6 +8,7 @@ defineProps<{
   copied: boolean;
   detailsOpen: boolean;
   originalUrl: string;
+  downloadOriginalUrl: string;
   originalLoading: boolean;
   originalLoaded: boolean;
   saving: boolean;
@@ -73,7 +74,7 @@ const emit = defineEmits<{
       <a
         v-if="image"
         class="viewer-action-btn"
-        :href="originalUrl"
+        :href="downloadOriginalUrl"
         target="_blank"
         rel="noreferrer"
         title="下载原图"
