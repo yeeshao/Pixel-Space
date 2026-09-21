@@ -1,12 +1,5 @@
 import type { RequestLogger } from './logger';
 
-
-const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
-const shanghaiNow = () => {
-  const shifted = new Date(Date.now() + SHANGHAI_OFFSET_MS);
-  return shifted.toISOString().replace('Z', '+08:00');
-};
-
 export type AnalyticsEvent = 'view' | 'download';
 
 export const visitorIp = (request: Request): string =>
@@ -57,25 +50,3 @@ export const recordImageEvent = async (
     });
   }
 };
-
-
-export async function upsertVisitorPresence(
-  db: D1Database,
-  ipHash: string,
-  event: string,
-  userAgent?: string | null,
-  cfRay?: string | null,
-) {
-  const now = shanghaiNow();
-  await db.prepare(`
-    INSERT INTO visitor_presence
-      (ip_hash, first_seen_at, last_seen_at, last_event, user_agent, cf_ray)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(ip_hash) DO UPDATE SET
-      last_seen_at = excluded.last_seen_at,
-      last_event = excluded.last_event,
-      user_agent = excluded.user_agent,
-      cf_ray = excluded.cf_ray
-  `).bind(ipHash, now, now, event, userAgent ?? null, cfRay ?? null).run();
-}
-
