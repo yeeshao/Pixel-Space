@@ -12,7 +12,7 @@ export const recordImageEvent = async (
   db: D1Database,
   request: Request,
   key: string,
-  event: AnalyticsEvent,yy
+  event: AnalyticsEvent,
   logger?: RequestLogger,
 ): Promise<void> => {
   const column = event === 'download' ? 'download_count' : 'view_count';
