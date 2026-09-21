@@ -10,7 +10,7 @@ LEFT JOIN images i ON i.key = e.image_key
 ORDER BY e.id DESC
 LIMIT 100
 `;
-yy
+
 const TOP_SQL = `
 SELECT key, original_filename, view_count, download_count
 FROM images
