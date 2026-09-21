@@ -23,14 +23,24 @@ export const recordImageEvent = async (
       .bind(key)
       .run();
 
+    // 访问记录按 IP 去重：同一个 IP 不再不断写入明细事件，
+    // 只更新该 IP 的最后在线时间；图片自身的访问/下载计数仍正常累计。
     await db
-      .prepare(`INSERT INTO analytics_events (image_key, event, ip, user_agent, cf_ray) VALUES (?, ?, ?, ?, ?)` )
+      .prepare(`
+        INSERT INTO visitor_presence (
+          ip, first_seen_at, last_seen_at, user_agent, cf_ray, last_event
+        ) VALUES (?, datetime('now'), datetime('now'), ?, ?, ?)
+        ON CONFLICT(ip) DO UPDATE SET
+          last_seen_at = datetime('now'),
+          user_agent = excluded.user_agent,
+          cf_ray = excluded.cf_ray,
+          last_event = excluded.last_event
+      `)
       .bind(
-        key,
-        event,
         ip,
         request.headers.get('user-agent') ?? null,
         request.headers.get('cf-ray') ?? null,
+        event,
       )
       .run();
 
