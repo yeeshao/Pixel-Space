@@ -25,23 +25,6 @@ const LATEST_SQL = `
 SELECT ${IMAGE_SELECT_COLUMNS}
 FROM images
 WHERE is_public = 1
-  AND (
-    folder_id IS NULL OR NOT EXISTS (
-      WITH RECURSIVE ancestors(id, parent_id, is_public) AS (
-        SELECT id, parent_id, is_public
-        FROM folders
-        WHERE id = images.folder_id
-        UNION ALL
-        SELECT f.id, f.parent_id, f.is_public
-        FROM folders f
-        JOIN ancestors a ON f.id = a.parent_id
-      )
-      SELECT 1
-      FROM ancestors
-      WHERE is_public != 1
-      LIMIT 1
-    )
-  )
 ORDER BY created_at DESC
 LIMIT 6
 `;
