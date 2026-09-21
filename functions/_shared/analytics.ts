@@ -50,3 +50,35 @@ export const recordImageEvent = async (
     });
   }
 };
+
+
+/**
+ * Compatibility API used by functions/api/visit.ts.
+ * This is intentionally separate from visitor_presence so the existing
+ * one-row-per-IP online record behavior is not changed.
+ */
+export async function recordSiteVisit(
+  db: D1Database,
+  request: Request,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const ip =
+    request.headers.get('CF-Connecting-IP') ??
+    request.headers.get('X-Forwarded-For') ??
+    'unknown';
+  const userAgent = request.headers.get('User-Agent');
+  const cfRay = request.headers.get('CF-Ray');
+
+  // Record the site visit when the analytics event table is available.
+  // Never let analytics failure break the public visit endpoint.
+  try {
+    await db.prepare(`
+      INSERT INTO analytics_events
+        (event_type, target_type, target_key, created_at, ip, user_agent, cf_ray)
+      VALUES (?, 'site', NULL, ?, ?, ?, ?)
+    `).bind('site_visit', now, ip, userAgent, cfRay).run();
+  } catch {
+    // Keep the visit endpoint available if this deployment has an older
+    // analytics_events schema.
+  }
+}
