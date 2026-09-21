@@ -86,6 +86,7 @@ const {
 const {
   publicPageUrl,
   originalUrl,
+  downloadOriginalUrl,
   linkRows,
   formatImageTimestamp,
   exifRows,
@@ -254,6 +255,7 @@ onBeforeUnmount(() => {
               :copied="copied"
               :details-open="detailsOpen"
               :original-url="originalUrl"
+              :download-original-url="downloadOriginalUrl"
               :original-loading="originalLoading"
               :original-loaded="originalLoaded"
               :saving="saving"
@@ -346,4 +348,5 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped src="./image-lightbox.css"></style>
+
 
