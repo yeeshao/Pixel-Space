@@ -103,4 +103,3 @@ onMounted(load);
     </template>
   </section>
 </template>
-
