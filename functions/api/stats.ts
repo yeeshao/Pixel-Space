@@ -9,7 +9,6 @@ import { IMAGE_SELECT_COLUMNS, rowToRecord, scrubRecordForVisitor } from '../_sh
 // photos: 公开图片总数
 // storage_bytes: 公开图片压缩后总字节
 // places: 标注了 location_name 且 location_public=1 的去重地点数
-// site_views: 网站公开页面访问次数（与照片 view_count 完全分离）
 // latest: 最近 6 张公开图，作为首页的视觉钩子
 const SUMMARY_SQL = `
 SELECT
@@ -26,6 +25,17 @@ const LATEST_SQL = `
 SELECT ${IMAGE_SELECT_COLUMNS}
 FROM images
 WHERE is_public = 1
+  AND (
+    folder_id IS NULL OR NOT EXISTS (
+      WITH RECURSIVE ancestors(id, parent_id, is_public) AS (
+        SELECT id, parent_id, is_public FROM folders WHERE id = images.folder_id
+        UNION ALL
+        SELECT f.id, f.parent_id, f.is_public
+        FROM folders f JOIN ancestors a ON f.id = a.parent_id
+      )
+      SELECT 1 FROM ancestors WHERE is_public != 1 LIMIT 1
+    )
+  )
 ORDER BY created_at DESC
 LIMIT 6
 `;
@@ -41,9 +51,8 @@ interface SummaryRow {
 export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/stats', async ({ env, request }, logger) => {
   try {
     const isAdmin = (await resolveAdmin(request, env)) !== null;
-    const [summary, siteStats, latest] = await Promise.all([
+    const [summary, latest] = await Promise.all([
       env.DB.prepare(SUMMARY_SQL).first<SummaryRow>(),
-      env.DB.prepare('SELECT page_views FROM site_stats WHERE id = 1').first<{ page_views: number }>(),
       env.DB.prepare(LATEST_SQL).all<ImageRow>(),
     ]);
 
@@ -58,7 +67,6 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/stats',
       places: summary?.places ?? 0,
       views: summary?.views ?? 0,
       downloads: summary?.downloads ?? 0,
-      site_views: Number(siteStats?.page_views ?? 0),
       latest: latestRecords,
     });
   } catch (error) {
