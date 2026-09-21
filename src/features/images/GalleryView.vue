@@ -6,7 +6,7 @@ import LoadingState from '@/shared/ui/LoadingState.vue';
 import SelectPopover from '@/shared/ui/SelectPopover.vue';
 import type { ImageRecord } from './image.types';
 import { imageSortOptions, sortImagesByMode, type ImageSortMode } from './image-sort';
-import { listImagesPage } from './images.api';
+import { fetchImage, listImagesPage } from './images.api';
 import { fetchFolders, type FolderRecord } from '@/features/library/library.api';
 import FolderPickerPopover from './FolderPickerPopover.vue';
 
