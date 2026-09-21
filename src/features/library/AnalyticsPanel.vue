@@ -39,7 +39,7 @@ onMounted(load);
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <div>
         <div class="text-sm font-semibold text-white">访问与下载统计</div>
-        <div class="mt-1 text-xs text-slate-500">统计固定放在控制台最后；公开页面只显示数量，IP / User-Agent / CF-Ray 仅管理员可见。同一 IP 只保留一条记录，重复访问仅更新最后在线时间。</div>
+        <div class="mt-1 text-xs text-slate-500">统计固定放在控制台最后；照片访问/下载次数仍按照片分别统计。IP / User-Agent / CF-Ray 仅管理员可见；同一 IP 只保留一条记录，重复访问仅更新最后在线时间。时间统一为中国上海时间。</div>
       </div>
       <button
         type="button"
@@ -58,11 +58,11 @@ onMounted(load);
     <template v-else>
       <div class="grid grid-cols-2 gap-3 sm:max-w-md">
         <div class="rounded-lg border border-white/5 bg-white/[0.03] p-3">
-          <div class="text-xs text-slate-500">公开总访问</div>
+          <div class="text-xs text-slate-500">网站页面总访问</div>
           <div class="mt-1 font-mono text-xl font-bold text-neon-cyan">{{ (stats?.views ?? 0).toLocaleString() }}</div>
         </div>
         <div class="rounded-lg border border-white/5 bg-white/[0.03] p-3">
-          <div class="text-xs text-slate-500">公开总下载</div>
+          <div class="text-xs text-slate-500">照片总下载</div>
           <div class="mt-1 font-mono text-xl font-bold text-neon-pink">{{ (stats?.downloads ?? 0).toLocaleString() }}</div>
         </div>
       </div>
@@ -70,7 +70,7 @@ onMounted(load);
       <div>
         <div class="mb-2 flex items-center justify-between gap-2">
           <div class="text-xs font-semibold text-slate-300">访客 IP 在线记录（同 IP 自动去重）</div>
-          <div class="text-[0.65rem] text-slate-600">最近在线 100 个 IP</div>
+          <div class="text-[0.65rem] text-slate-600">最近在线 100 个 IP · 上海时间</div>
         </div>
         <div v-if="stats?.visitors.length" class="max-h-80 overflow-auto rounded-lg border border-white/5">
           <table class="w-full min-w-[760px] text-left text-xs">
@@ -96,7 +96,7 @@ onMounted(load);
             </tbody>
           </table>
         </div>
-        <p v-else class="rounded-lg border border-white/5 px-3 py-4 text-xs text-slate-500">暂无访客在线记录。打开一张公开照片或执行一次公开下载后刷新这里即可看到 IP。</p>
+        <p v-else class="rounded-lg border border-white/5 px-3 py-4 text-xs text-slate-500">暂无访客在线记录。打开公开页面、照片或执行公开下载后刷新这里即可看到 IP。</p>
       </div>
     </template>
   </section>

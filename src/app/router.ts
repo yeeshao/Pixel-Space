@@ -93,6 +93,16 @@ router.beforeEach(async (to) => {
 
 router.afterEach((to) => {
   document.title = `${String(to.meta.title ?? 'Pixel Space')} · Pixel Space`;
+
+  // 统计网页访问次数，而不是照片访问次数。
+  // 只统计公开页面，管理员控制台/上传页不会进入网站公开访问数。
+  if (!to.meta.requiresAdmin && to.name !== 'login') {
+    void fetch('/api/visit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      keepalive: true,
+    }).catch(() => undefined);
+  }
 });
 
 export default router;

@@ -23,10 +23,13 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
   try {
     const totals = await env.DB.prepare(`
       SELECT
-        COALESCE(SUM(view_count), 0) AS views,
         COALESCE(SUM(download_count), 0) AS downloads
       FROM images
-    `).first<{ views: number; downloads: number }>();
+    `).first<{ downloads: number }>();
+
+    const siteStats = await env.DB
+      .prepare('SELECT page_views FROM site_stats WHERE id = 1')
+      .first<{ page_views: number }>();
 
     const top = await env.DB.prepare(TOP_SQL).all<{
       key: string;
@@ -45,7 +48,7 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
     }>();
 
     return json({
-      views: Number(totals?.views ?? 0),
+      views: Number(siteStats?.page_views ?? 0),
       downloads: Number(totals?.downloads ?? 0),
       top: top.results ?? [],
       visitors: visitors.results ?? [],

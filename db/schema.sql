@@ -108,3 +108,23 @@ CREATE TABLE analytics_events (
 
 CREATE INDEX idx_analytics_events_created_at ON analytics_events(created_at DESC);
 CREATE INDEX idx_analytics_events_image_key ON analytics_events(image_key, created_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS visitor_presence (
+  ip            TEXT PRIMARY KEY,
+  first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_seen_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  user_agent    TEXT,
+  cf_ray        TEXT,
+  last_event    TEXT NOT NULL CHECK (last_event IN ('view', 'download'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_visitor_presence_last_seen
+  ON visitor_presence(last_seen_at DESC);
+
+CREATE TABLE IF NOT EXISTS site_stats (
+  id         INTEGER PRIMARY KEY CHECK (id = 1),
+  page_views INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT OR IGNORE INTO site_stats (id, page_views) VALUES (1, 0);

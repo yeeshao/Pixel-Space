@@ -12,6 +12,7 @@ interface StatsResponse {
   places: number;
   views: number;
   downloads: number;
+  site_views: number;
   latest: ImageRecord[];
 }
 
@@ -29,7 +30,7 @@ const formatNumber = (value: number): string => value.toLocaleString('en-US');
 const photosLabel = computed(() => (stats.value ? formatNumber(stats.value.photos) : '--'));
 const storageLabel = computed(() => (stats.value ? formatBytes(stats.value.storage_bytes, '0 B') : '--'));
 const placesLabel = computed(() => (stats.value ? formatNumber(stats.value.places) : '--'));
-const viewsLabel = computed(() => (stats.value ? formatNumber(stats.value.views) : '--'));
+const viewsLabel = computed(() => (stats.value ? formatNumber(stats.value.site_views) : '--'));
 const downloadsLabel = computed(() => (stats.value ? formatNumber(stats.value.downloads) : '--'));
 
 const latest = computed(() => stats.value?.latest ?? []);
@@ -133,7 +134,7 @@ onMounted(async () => {
             <div class="stat-cell">
               <dt class="stat-label">访问</dt>
               <dd class="stat-value">{{ viewsLabel }}</dd>
-              <p class="stat-hint">公开照片总访问次数</p>
+              <p class="stat-hint">网站页面总访问次数</p>
             </div>
             <div class="stat-cell">
               <dt class="stat-label">下载</dt>
