@@ -16,6 +16,7 @@ export const recordImageEvent = async (
   logger?: RequestLogger,
 ): Promise<void> => {
   const column = event === 'download' ? 'download_count' : 'view_count';
+  const ip = visitorIp(request);
   try {
     await db
       .prepare(`UPDATE images SET ${column} = COALESCE(${column}, 0) + 1 WHERE key = ?`)
@@ -27,7 +28,7 @@ export const recordImageEvent = async (
       .bind(
         key,
         event,
-        visitorIp(request),
+        ip,
         request.headers.get('user-agent') ?? null,
         request.headers.get('cf-ray') ?? null,
       )
@@ -37,7 +38,7 @@ export const recordImageEvent = async (
       context: {
         key,
         event,
-        ip: visitorIp(request),
+        ip,
         userAgent: request.headers.get('user-agent') ?? null,
         cfRay: request.headers.get('cf-ray') ?? null,
       },
@@ -46,7 +47,7 @@ export const recordImageEvent = async (
     // Analytics must never make a valid image request fail.
     logger?.warn(`record image ${event} failed`, {
       error,
-      context: { key, event, ip: visitorIp(request) },
+      context: { key, event, ip },
     });
   }
 };
