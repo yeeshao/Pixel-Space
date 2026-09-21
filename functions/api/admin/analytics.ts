@@ -29,16 +29,6 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
       FROM images
     `).first<{ views: number; downloads: number }>();
 
-    let visitors = 0;
-    try {
-      const visitorRow = await env.DB
-        .prepare(`SELECT COUNT(DISTINCT ip) AS visitors FROM analytics_events WHERE ip IS NOT NULL AND ip != ''`)
-        .first<{ visitors: number }>();
-      visitors = Number(visitorRow?.visitors ?? 0);
-    } catch (visitorError) {
-      logger.warn('GET /api/admin/analytics visitor count failed', { error: visitorError });
-    }
-
     const top = await env.DB.prepare(TOP_SQL).all<{
       key: string;
       original_filename: string;
@@ -60,7 +50,6 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
     return json({
       views: Number(totals?.views ?? 0),
       downloads: Number(totals?.downloads ?? 0),
-      visitors,
       top: top.results ?? [],
       recent: recent.results ?? [],
     });
