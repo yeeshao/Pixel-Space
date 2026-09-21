@@ -48,6 +48,14 @@ export const useImageLightboxDetails = ({
     return originalImageUrl(image.value);
   });
 
+  const downloadOriginalUrl = computed(() => {
+    if (!image.value) return '';
+    if (adminOriginal) return originalUrl.value;
+    return originalUrl.value
+      ? `${originalUrl.value}${originalUrl.value.includes('?') ? '&' : '?'}download=1`
+      : '';
+  });
+
   const linkRows = computed(() => {
     if (!image.value) return [];
     return buildImageLinkRows(image.value, origin);
@@ -109,6 +117,7 @@ export const useImageLightboxDetails = ({
   return {
     publicPageUrl,
     originalUrl,
+    downloadOriginalUrl,
     linkRows,
     formatExifTakenAt,
     formatImageTimestamp,
@@ -122,4 +131,5 @@ export const useImageLightboxDetails = ({
     mapRegion,
   };
 };
+
 
