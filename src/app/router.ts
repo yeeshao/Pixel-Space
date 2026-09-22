@@ -91,36 +91,58 @@ router.beforeEach(async (to) => {
   return { name: 'login', query: { redirect: to.fullPath } };
 });
 
-// 防止 Vue Router 在同一次页面初始化/同一次导航过程中重复触发 afterEach，
-// 从而导致一次刷新被统计为 2 次访问。
-// 页面真正刷新后模块会重新加载，所以刷新一次仍会正常 +1。
-let lastVisitPath = '';
-let lastVisitAt = 0;
+// 访问统计只在当前页面文档启动一次。SPA 内部切换路由不能重新创建
+// heartbeat，也不能重新发送 enter；真正离开网站时由 pagehide 发送 leave。
+let visitTrackingStarted = false;
+let heartbeatTimer: number | null = null;
+
+const postVisit = (action: 'enter' | 'heartbeat' | 'leave') => {
+  const body = JSON.stringify({ action });
+
+  // sendBeacon 专门用于页面关闭/离开场景，比普通 fetch 更可靠。
+  if (action === 'leave' && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+    const blob = new Blob([body], { type: 'application/json' });
+    if (navigator.sendBeacon('/api/visit', blob)) return;
+  }
+
+  void fetch('/api/visit', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body,
+    keepalive: true,
+    credentials: 'include',
+    cache: 'no-store',
+  }).catch(() => undefined);
+};
+
+const startVisitTracking = () => {
+  if (visitTrackingStarted) return;
+  visitTrackingStarted = true;
+
+  postVisit('enter');
+
+  // 正常浏览期间每 30 秒续一次在线状态。
+  // 如果浏览器被系统直接杀掉、没有触发 pagehide，后台会在 90 秒后
+  // 根据 last_seen_at 将该 IP 视为已离开。
+  heartbeatTimer = window.setInterval(() => postVisit('heartbeat'), 30_000);
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    postVisit('leave');
+    if (heartbeatTimer !== null) {
+      window.clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+  }, { once: true });
+}
 
 router.afterEach((to) => {
   document.title = `${String(to.meta.title ?? 'Pixel Space')} · Pixel Space`;
 
-  // 统计网页访问次数，而不是照片访问次数。
-  // 只统计公开页面，管理员控制台/上传页不会进入网站公开访问数。
+  // 只统计公开页面，管理员控制台/登录页不计入网站访问次数。
   if (!to.meta.requiresAdmin && to.name !== 'login') {
-    const now = Date.now();
-    const path = to.fullPath;
-
-    // 同一路径在 1500ms 内重复完成导航时只记 1 次。
-    // 这能过滤初始化阶段的重复 afterEach，但不会影响真正刷新页面：
-    // 刷新后 JS 上下文重建，lastVisitPath / lastVisitAt 会重新初始化。
-    if (path === lastVisitPath && now - lastVisitAt < 1500) return;
-
-    lastVisitPath = path;
-    lastVisitAt = now;
-
-    void fetch('/api/visit', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      credentials: 'include',
-      cache: 'no-store',
-      keepalive: true,
-    }).catch(() => undefined);
+    startVisitTracking();
   }
 });
 
