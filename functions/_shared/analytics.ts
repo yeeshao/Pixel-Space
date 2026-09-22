@@ -64,15 +64,15 @@ export async function recordSiteVisit(
 ): Promise<{ counted: boolean; sessionCookie: string }> {
   const now = new Date().toISOString();
   const ip = visitorIp(request);
-  const userAgent = request.headers.get('User-Agent');
-  const cfRay = request.headers.get('CF-Ray');
-  const cookieHeader = request.headers.get('Cookie') ?? '';
+  const userAgent = request.headers.get('user-agent');
+  const cfRay = request.headers.get('cf-ray');
+  const cookieHeader = request.headers.get('cookie') ?? '';
   const match = cookieHeader.match(/(?:^|;\s*)ps_visit_session=([^;]+)/);
   const existingSession = match?.[1] ?? '';
 
-  // A session cookie survives refreshes and SPA navigation, but is normally
-  // removed when the browser session is closed. Therefore one browser session
-  // counts once instead of counting every route change or refresh.
+  // A session cookie survives refreshes and SPA navigation, but normally
+  // disappears when the browser session is closed. Do not count refreshes,
+  // route changes, or photo views as additional site visits.
   if (existingSession) {
     return { counted: false, sessionCookie: existingSession };
   }
@@ -80,42 +80,58 @@ export async function recordSiteVisit(
   const sessionId = crypto.randomUUID();
 
   try {
-    await db.batch([
-      db.prepare(`
-        INSERT INTO analytics_events
-          (event_type, target_type, target_key, created_at, ip, user_agent, cf_ray)
-        VALUES (?, 'site', NULL, ?, ?, ?, ?)
-      `).bind('site_visit', now, ip, userAgent, cfRay),
-      db.prepare(`
+    // Do NOT write site visits into analytics_events.
+    // analytics_events is the photo-event table and requires image_key/event.
+    // The old implementation attempted to insert event_type/target_type,
+    // which do not exist in the production schema, causing the whole batch
+    // to fail and preventing both page_views and visitor_presence from being
+    // recorded.
+    await db
+      .prepare(`
         INSERT INTO site_stats (id, page_views)
         VALUES (1, 1)
         ON CONFLICT(id) DO UPDATE SET page_views = page_views + 1
-      `),
-    ]);
-
-    // Keep the existing one-row-per-IP presence record updated without
-    // changing the per-photo view/download counters.
-    try {
-      await db.prepare(`
-        INSERT INTO visitor_presence
-          (ip, first_seen_at, last_seen_at, user_agent, cf_ray, last_event)
-        VALUES (?, ?, ?, ?, ?, 'view')
-        ON CONFLICT(ip) DO UPDATE SET
-          last_seen_at = excluded.last_seen_at,
-          user_agent = excluded.user_agent,
-          cf_ray = excluded.cf_ray,
-          last_event = 'view'
-      `).bind(ip, now, now, userAgent, cfRay).run();
-    } catch {
-      // Older databases may not have visitor_presence yet; site statistics
-      // should still work.
-    }
+      `)
+      .run();
   } catch (error) {
     if (logger && typeof logger === 'object' && 'error' in logger) {
       try {
         (logger as { error: (message: string, data?: unknown) => void }).error(
-          'recordSiteVisit analytics insert failed',
+          'recordSiteVisit page_views update failed',
           { error },
+        );
+      } catch {
+        // ignore logger errors
+      }
+    }
+  }
+
+  try {
+    // Keep exactly one current record per IP. A new browser session updates
+    // the entry time for that IP; left_at is cleared because the visitor is
+    // currently online. All timestamps are stored as UTC ISO strings and are
+    // converted to Asia/Shanghai only when displayed by the admin UI.
+    await db
+      .prepare(`
+        INSERT INTO visitor_presence
+          (ip, first_seen_at, last_seen_at, user_agent, cf_ray, last_event, entered_at, left_at)
+        VALUES (?, ?, ?, ?, ?, 'view', ?, NULL)
+        ON CONFLICT(ip) DO UPDATE SET
+          last_seen_at = excluded.last_seen_at,
+          user_agent = excluded.user_agent,
+          cf_ray = excluded.cf_ray,
+          last_event = 'view',
+          entered_at = excluded.entered_at,
+          left_at = NULL
+      `)
+      .bind(ip, now, now, userAgent, cfRay, now)
+      .run();
+  } catch (error) {
+    if (logger && typeof logger === 'object' && 'error' in logger) {
+      try {
+        (logger as { error: (message: string, data?: unknown) => void }).error(
+          'recordSiteVisit visitor_presence update failed',
+          { error, ip },
         );
       } catch {
         // ignore logger errors
@@ -125,3 +141,4 @@ export async function recordSiteVisit(
 
   return { counted: true, sessionCookie: sessionId };
 }
+
