@@ -117,9 +117,12 @@ router.afterEach((to) => {
     void fetch('/api/visit', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
+      credentials: 'include',
+      cache: 'no-store',
       keepalive: true,
     }).catch(() => undefined);
   }
 });
 
 export default router;
+
