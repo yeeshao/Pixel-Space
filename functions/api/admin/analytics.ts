@@ -37,7 +37,16 @@ export const onRequestGet: PagesFunction<Env> = withRequestLogging('/api/admin/a
     }>();
 
     const visitors = await env.DB.prepare(`
-      SELECT ip, entered_at, left_at, user_agent, cf_ray
+      SELECT
+        ip,
+        entered_at,
+        CASE
+          WHEN left_at IS NOT NULL THEN left_at
+          WHEN julianday(last_seen_at) < julianday('now') - (90.0 / 86400.0) THEN last_seen_at
+          ELSE NULL
+        END AS left_at,
+        user_agent,
+        cf_ray
       FROM visitor_presence
       ORDER BY COALESCE(entered_at, first_seen_at) DESC
       LIMIT 100
