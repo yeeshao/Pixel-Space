@@ -10,6 +10,9 @@ import { withRequestLogging } from '../../../_shared/logger';
 const MAX_LOCATION_BATCH = 200;
 const MAX_VISIBILITY_BATCH = 200;
 const MAX_AI_BATCH = 1;
+// D1/SQLite 对一次 SQL bind 数量有限制，批量照片操作需要分批处理
+const LOCATION_CHUNK_SIZE = 50;
+const VISIBILITY_CHUNK_SIZE = 50;
 
 export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/images/batch', async ({ request, env }, logger) => {
   const originError = requireSameOrigin(request);
@@ -29,25 +32,41 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
       if (lat === undefined || lng === undefined) return badRequest('invalid_location_payload');
       const name = stringOrNull(raw.location_name);
       const region = raw.location_region === 'china' || raw.location_region === 'global' ? raw.location_region : null;
-      const placeholders = keys.map(() => '?').join(',');
-      await env.DB.prepare(`UPDATE images SET location_name=?, location_lat=?, location_lng=?, location_region=?, updated_at=datetime('now') WHERE key IN (${placeholders})`).bind(name, lat, lng, region, ...keys).run();
-      const rows = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key IN (${placeholders})`).bind(...keys).all<ImageRow>();
-      return json({ ok: true, action, processed: rows.results?.length ?? 0, items: (rows.results ?? []).map(rowToAdminRecord) });
+      const updatedRows: ImageRow[] = [];
+      for (let i = 0; i < keys.length; i += LOCATION_CHUNK_SIZE) {
+        const chunk = keys.slice(i, i + LOCATION_CHUNK_SIZE);
+        const placeholders = chunk.map(() => '?').join(',');
+        await env.DB.prepare(`UPDATE images SET location_name=?, location_lat=?, location_lng=?, location_region=?, updated_at=datetime('now') WHERE key IN (${placeholders})`)
+          .bind(name, lat, lng, region, ...chunk)
+          .run();
+        const rows = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key IN (${placeholders})`)
+          .bind(...chunk)
+          .all<ImageRow>();
+        updatedRows.push(...(rows.results ?? []));
+      }
+      return json({ ok: true, action, processed: updatedRows.length, items: updatedRows.map(rowToAdminRecord) });
     }
 
     if (action === 'visibility') {
       const isPublic = raw.is_public === 0 || raw.is_public === 1 ? raw.is_public : null;
       if (isPublic === null) return badRequest('invalid_visibility_payload');
-      const placeholders = keys.map(() => '?').join(',');
-      await env.DB.prepare(
-        `UPDATE images SET is_public=?, updated_at=datetime('now') WHERE key IN (${placeholders})`,
-      ).bind(isPublic, ...keys).run();
-      const rows = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key IN (${placeholders})`).bind(...keys).all<ImageRow>();
+      const updatedRows: ImageRow[] = [];
+      for (let i = 0; i < keys.length; i += VISIBILITY_CHUNK_SIZE) {
+        const chunk = keys.slice(i, i + VISIBILITY_CHUNK_SIZE);
+        const placeholders = chunk.map(() => '?').join(',');
+        await env.DB.prepare(
+          `UPDATE images SET is_public=?, updated_at=datetime('now') WHERE key IN (${placeholders})`,
+        ).bind(isPublic, ...chunk).run();
+        const rows = await env.DB.prepare(`SELECT ${IMAGE_SELECT_COLUMNS} FROM images WHERE key IN (${placeholders})`)
+          .bind(...chunk)
+          .all<ImageRow>();
+        updatedRows.push(...(rows.results ?? []));
+      }
       return json({
         ok: true,
         action,
-        processed: rows.results?.length ?? 0,
-        items: (rows.results ?? []).map(rowToAdminRecord),
+        processed: updatedRows.length,
+        items: updatedRows.map(rowToAdminRecord),
       });
     }
 
@@ -103,3 +122,4 @@ export const onRequestPost: PagesFunction<Env> = withRequestLogging('/api/admin/
     return serverError('images_batch_failed');
   }
 });
+
