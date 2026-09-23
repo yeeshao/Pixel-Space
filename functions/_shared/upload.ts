@@ -23,7 +23,7 @@ import { archiveOriginalAfterUpload } from './archive';
 import { requireSameOrigin } from './security';
 import { createStaticMapCacheTask, staticMapRefererFromRequest } from './static-map';
 
-const MAX_ORIGINAL_BYTES = 50 * 1024 * 1024;
+const MAX_ORIGINAL_BYTES = 200 * 1024 * 1024;
 const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 
 const INSERT_SQL = `
@@ -356,3 +356,4 @@ export const handleUploadPost = async (
     return serverError('upload_failed');
   }
 };
+
