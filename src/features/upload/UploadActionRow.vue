@@ -43,7 +43,7 @@ const emit = defineEmits<{
       </span>
       <div class="drop-text">
         <p class="drop-title">{{ hasEntries ? '继续添加更多图片' : '选择手机照片（支持多选）' }}</p>
-        <p class="drop-hint">可在系统照片选择器中切换相册 · 单张上限 50 MB</p>
+        <p class="drop-hint">可在系统照片选择器中切换相册 · 单张上限 200 MB</p>
       </div>
     </button>
 
@@ -124,4 +124,5 @@ const emit = defineEmits<{
 </template>
 
 <style scoped src="./upload-view.css"></style>
+
 
