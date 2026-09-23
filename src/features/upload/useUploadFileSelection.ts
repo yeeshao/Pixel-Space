@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue';
 
 import type { UploadEntry } from './useUploadQueue';
 
-const MAX_ORIGINAL_BYTES = 50 * 1024 * 1024;
+const MAX_ORIGINAL_BYTES = 200 * 1024 * 1024;
 
 type FileWithRelativePath = File & { webkitRelativePath?: string };
 
@@ -53,7 +53,7 @@ export const useUploadFileSelection = ({
         continue;
       }
       if (file.size > MAX_ORIGINAL_BYTES) {
-        globalError.value = `已跳过超过 50MB 的文件：${file.name}`;
+        globalError.value = `已跳过超过 200MB 的文件：${file.name}`;
         continue;
       }
       const fileKey = queueFileKey(file);
@@ -166,4 +166,5 @@ export const useUploadFileSelection = ({
     clearAll,
   };
 };
+
 
